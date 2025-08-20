@@ -9,7 +9,11 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "typescript": "~5.8.3",
     "vite": "^7.1.2"
+  },
+  "dependencies": {
+    "@vikunalabs/ui-library": "file:../../@vikunalabs/ui-library"
   }
 }
