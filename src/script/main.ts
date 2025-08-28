@@ -1,8 +1,5 @@
 import '../style/main.css'
 
-// Import UI library components
-import '@vikunalabs/ui-library';
-
 // Import stores
 import { appStore } from '../stores';
 
