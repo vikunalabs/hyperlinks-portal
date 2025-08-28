@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement } from 'lit/decorators.js';
-import { router } from '../router';
+import { simpleRouter } from '../router/simple-router';
 
 @customElement('not-found-page')
 export class NotFoundPage extends LitElement {
@@ -66,7 +66,7 @@ export class NotFoundPage extends LitElement {
   `;
 
   private handleGoHome() {
-    router.navigate('/');
+    simpleRouter.navigate('/');
   }
 
   private handleGoBack() {

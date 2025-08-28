@@ -2,8 +2,8 @@
 
 export interface User {
   id: string;
+  username: string;
   email: string;
-  name?: string;
   role: UserRole;
   organization?: string;
   emailVerified: boolean;
@@ -20,12 +20,12 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
+  username: string;
   email: string;
   password: string;
-  name?: string;
   organization?: string;
   agreeToTerms: boolean;
-  consentToDataProcessing: boolean;
+  consentToMarketing: boolean;
 }
 
 export interface LoginResponse {

@@ -1,11 +1,23 @@
 import '@vikunalabs/ui-library';
+import './styles/main.css';
 import './pages'; // Register all page components
-import { router } from './router';
-import { useAuthStore } from './stores/auth-store';
+
+// Debug: Check if UI components are registered (remove this in production)
+if (config.app.debug) {
+  console.log('[Debug] UI Components registration check:');
+  console.log('ui-alert:', customElements.get('ui-alert'));
+  console.log('ui-button:', customElements.get('ui-button'));
+  console.log('ui-card:', customElements.get('ui-card'));
+  console.log('ui-input:', customElements.get('ui-input'));
+  console.log('ui-loading-spinner:', customElements.get('ui-loading-spinner'));
+}
+import { simpleRouter } from './router/simple-router';
+import type { RouteConfig } from './router/routes';
+import { authStore } from './stores/auth-store';
 import { config } from './config';
 
 class AppInitializer {
-  private authStore = useAuthStore;
+  private authStore = authStore;
 
   async initialize() {
     try {
@@ -27,7 +39,7 @@ class AppInitializer {
       this.setupAuthGuard();
 
       // Start the router
-      router.start();
+      simpleRouter.start();
 
       if (config.app.debug) {
         console.log('[App] Application initialized successfully');
@@ -40,6 +52,13 @@ class AppInitializer {
   }
 
   private async restoreAuthState() {
+    // Skip auth restoration if backend servers are not available
+    // This prevents unnecessary network calls during development
+    if (config.isDevelopment()) {
+      console.log('[App] Skipping auth restoration in development mode');
+      return;
+    }
+
     try {
       // Check if we have a valid session by trying to refresh the token
       const isAuthenticated = await this.authStore.getState().refreshToken();
@@ -56,7 +75,7 @@ class AppInitializer {
   }
 
   private setupAuthGuard() {
-    router.addGuard((to) => {
+    simpleRouter.addGuard((to: RouteConfig) => {
       const isAuthenticated = this.authStore.getState().isAuthenticated();
       
       // If route requires auth but user is not authenticated
@@ -64,7 +83,7 @@ class AppInitializer {
         if (config.app.debug) {
           console.log('[App] Route requires authentication, redirecting to login');
         }
-        router.navigate('/login');
+        simpleRouter.navigate('/login');
         return false;
       }
 
@@ -73,7 +92,7 @@ class AppInitializer {
         if (config.app.debug) {
           console.log('[App] User already authenticated, redirecting to dashboard');
         }
-        router.navigate('/dashboard');
+        simpleRouter.navigate('/dashboard');
         return false;
       }
 
@@ -86,7 +105,7 @@ class AppInitializer {
     if (app) {
       app.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 1rem;">
-          <ui-spinner size="large"></ui-spinner>
+          <ui-loading-spinner size="large"></ui-loading-spinner>
           <p>Initializing ${config.app.name}...</p>
         </div>
       `;

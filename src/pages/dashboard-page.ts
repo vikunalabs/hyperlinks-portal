@@ -1,8 +1,8 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { useAuthStore } from '../stores/auth-store';
-import { useUrlStore } from '../stores/url-store';
-import { router } from '../router';
+import { authStore } from '../stores/auth-store';
+import { urlStore } from '../stores/url-store';
+import { simpleRouter } from '../router/simple-router';
 
 @customElement('dashboard-page')
 export class DashboardPage extends LitElement {
@@ -20,8 +20,8 @@ export class DashboardPage extends LitElement {
   @state()
   private recentUrls: any[] = [];
 
-  private authStore = useAuthStore;
-  private urlStore = useUrlStore;
+  private authStore = authStore;
+  private urlStore = urlStore;
 
   static styles = css`
     :host {
@@ -246,20 +246,20 @@ export class DashboardPage extends LitElement {
   }
 
   private handleCreateUrl() {
-    router.navigate('/urls/create');
+    simpleRouter.navigate('/urls/create');
   }
 
   private handleViewAllUrls() {
-    router.navigate('/urls');
+    simpleRouter.navigate('/urls');
   }
 
   private handleViewUrl(urlId: string) {
-    router.navigate(`/urls/${urlId}`);
+    simpleRouter.navigate(`/urls/${urlId}`);
   }
 
   private handleLogout() {
     this.authStore.getState().logout();
-    router.navigate('/');
+    simpleRouter.navigate('/');
   }
 
   private formatDate(dateString: string) {
@@ -302,7 +302,7 @@ export class DashboardPage extends LitElement {
 
   private renderRecentUrls() {
     if (this.isLoading) {
-      return html`<ui-spinner size="large"></ui-spinner>`;
+      return html`<ui-loading-spinner size="large"></ui-loading-spinner>`;
     }
 
     if (this.recentUrls.length === 0) {

@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { useUrlStore } from '../stores/url-store';
-import { router } from '../router';
+import { urlStore } from '../stores/url-store';
+import { simpleRouter } from '../router/simple-router';
 
 @customElement('home-page')
 export class HomePage extends LitElement {
@@ -14,7 +14,7 @@ export class HomePage extends LitElement {
   @state()
   private error: string | null = null;
 
-  private urlStore = useUrlStore;
+  private urlStore = urlStore;
 
   static styles = css`
     :host {
@@ -97,6 +97,32 @@ export class HomePage extends LitElement {
       gap: 2rem;
     }
 
+    .feature-card {
+      height: 100%;
+    }
+
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .feature-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 0.75rem 0;
+      color: var(--text-primary, #1a1a1a);
+      text-align: center;
+    }
+
+    .feature-description {
+      font-size: 0.875rem;
+      line-height: 1.5;
+      color: var(--text-secondary, #6c757d);
+      margin: 0;
+      text-align: center;
+    }
+
     @media (max-width: 768px) {
       .hero-title {
         font-size: 2rem;
@@ -147,11 +173,11 @@ export class HomePage extends LitElement {
   }
 
   private handleGetStarted() {
-    router.navigate('/register');
+    simpleRouter.navigate('/register');
   }
 
   private handleSignIn() {
-    router.navigate('/login');
+    simpleRouter.navigate('/login');
   }
 
   private copyToClipboard(url: string) {
@@ -224,8 +250,7 @@ export class HomePage extends LitElement {
             </form>
 
             ${this.error ? html`
-              <ui-alert variant="error">
-                ${this.error}
+              <ui-alert variant="error" message="${this.error}">
               </ui-alert>
             ` : ''}
 
@@ -248,7 +273,7 @@ export class HomePage extends LitElement {
                     </ui-button>
                   </div>
                   <p style="margin: 1rem 0 0 0; color: var(--text-secondary); font-size: 0.875rem;">
-                    Want analytics and custom domains? <a href="/register" style="color: var(--primary);">Create a free account</a>
+                    Want analytics and custom domains? <a href="#" @click=${(e: Event) => { e.preventDefault(); this.handleGetStarted(); }} style="color: var(--primary);">Create a free account</a>
                   </p>
                 </div>
               </ui-card>
@@ -261,41 +286,53 @@ export class HomePage extends LitElement {
           <div class="features-container">
             <h2 class="features-title">Everything You Need to Succeed</h2>
             <div class="features-grid">
-              <feature-card
-                icon="📊"
-                title="Powerful Analytics"
-                description="Track clicks, locations, devices, and referrers with detailed insights and real-time data."
-              ></feature-card>
+              <ui-card classes="feature-card">
+                <div slot="content">
+                  <div class="feature-icon">📊</div>
+                  <h3 class="feature-title">Powerful Analytics</h3>
+                  <p class="feature-description">Track clicks, locations, devices, and referrers with detailed insights and real-time data.</p>
+                </div>
+              </ui-card>
               
-              <feature-card
-                icon="🎨"
-                title="Custom Branding"
-                description="Use your own domain and create branded short links that build trust with your audience."
-              ></feature-card>
+              <ui-card classes="feature-card">
+                <div slot="content">
+                  <div class="feature-icon">🎨</div>
+                  <h3 class="feature-title">Custom Branding</h3>
+                  <p class="feature-description">Use your own domain and create branded short links that build trust with your audience.</p>
+                </div>
+              </ui-card>
               
-              <feature-card
-                icon="🔗"
-                title="Bulk Management"
-                description="Create, update, and manage hundreds of links at once with our powerful bulk operations."
-              ></feature-card>
+              <ui-card classes="feature-card">
+                <div slot="content">
+                  <div class="feature-icon">🔗</div>
+                  <h3 class="feature-title">Bulk Management</h3>
+                  <p class="feature-description">Create, update, and manage hundreds of links at once with our powerful bulk operations.</p>
+                </div>
+              </ui-card>
               
-              <feature-card
-                icon="📱"
-                title="QR Codes"
-                description="Generate QR codes for your short links and bridge the gap between offline and online."
-              ></feature-card>
+              <ui-card classes="feature-card">
+                <div slot="content">
+                  <div class="feature-icon">📱</div>
+                  <h3 class="feature-title">QR Codes</h3>
+                  <p class="feature-description">Generate QR codes for your short links and bridge the gap between offline and online.</p>
+                </div>
+              </ui-card>
               
-              <feature-card
-                icon="🔒"
-                title="Password Protection"
-                description="Secure your links with passwords and control access to your valuable content."
-              ></feature-card>
+              <ui-card classes="feature-card">
+                <div slot="content">
+                  <div class="feature-icon">🔒</div>
+                  <h3 class="feature-title">Password Protection</h3>
+                  <p class="feature-description">Secure your links with passwords and control access to your valuable content.</p>
+                </div>
+              </ui-card>
               
-              <feature-card
-                icon="⏰"
-                title="Link Expiration"
-                description="Set expiration dates for time-sensitive campaigns and automatically disable old links."
-              ></feature-card>
+              <ui-card classes="feature-card">
+                <div slot="content">
+                  <div class="feature-icon">⏰</div>
+                  <h3 class="feature-title">Link Expiration</h3>
+                  <p class="feature-description">Set expiration dates for time-sensitive campaigns and automatically disable old links.</p>
+                </div>
+              </ui-card>
             </div>
           </div>
         </section>

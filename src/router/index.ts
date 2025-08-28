@@ -11,7 +11,10 @@ class RouterManager {
   private guards: NavigationGuard[] = [];
 
   constructor() {
-    this.router = new Navigo('/', { hash: false });
+    this.router = new Navigo('/', { 
+      hash: false,
+      linksSelector: 'a[data-navigo]' // Enable automatic link handling
+    });
     this.setupRoutes();
   }
 
@@ -147,6 +150,9 @@ class RouterManager {
   }
 
   public start(): void {
+    // Update page links to enable automatic navigation
+    this.router.updatePageLinks();
+    // Resolve current route
     this.router.resolve();
   }
 

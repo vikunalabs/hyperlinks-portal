@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Component Test</title>
+</head>
+<body>
+    <h1>Testing UI Components</h1>
+    
+    <div>
+        <h2>UI Button Test:</h2>
+        <ui-button>Test Button</ui-button>
+        
+        <h2>UI Card Test:</h2>
+        <ui-card>
+            <div slot="content">This is a test card</div>
+        </ui-card>
+        
+        <h2>UI Input Test:</h2>
+        <ui-input label="Test Input" placeholder="Type here..."></ui-input>
+    </div>
+
+    <script type="module">
+        import '@vikunalabs/ui-library';
+        
+        console.log('UI library imported');
+        console.log('Custom elements defined:', customElements.get('ui-button'));
+    </script>
+</body>
+</html>

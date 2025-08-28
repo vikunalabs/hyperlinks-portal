@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { useAuthStore } from '../stores/auth-store';
-import { router } from '../router';
+import { authStore } from '../stores/auth-store';
+import { simpleRouter } from '../router/simple-router';
 import type { RegisterData } from '../types/auth';
 
 @customElement('register-page')
@@ -15,7 +15,7 @@ export class RegisterPage extends LitElement {
   @state()
   private success: string | null = null;
 
-  private authStore = useAuthStore;
+  private authStore = authStore;
 
   static styles = css`
     :host {
@@ -163,15 +163,10 @@ export class RegisterPage extends LitElement {
     
     // Validate checkboxes
     const agreeToTerms = formData.has('agreeToTerms');
-    const consentToDataProcessing = formData.has('consentToDataProcessing');
+    const consentToMarketing = formData.has('consentToMarketing');
     
     if (!agreeToTerms) {
-      this.error = 'Please accept the Terms of Service to continue';
-      return;
-    }
-    
-    if (!consentToDataProcessing) {
-      this.error = 'Please consent to data processing to continue';
+      this.error = 'Please accept the Terms of Service and Privacy Policy to continue';
       return;
     }
 
@@ -185,12 +180,12 @@ export class RegisterPage extends LitElement {
     }
     
     const registerData: RegisterData = {
+      username: formData.get('username') as string,
       email: formData.get('email') as string,
       password: password,
-      name: formData.get('name') as string || undefined,
       organization: formData.get('organization') as string || undefined,
       agreeToTerms,
-      consentToDataProcessing
+      consentToMarketing
     };
 
     this.isLoading = true;
@@ -206,7 +201,7 @@ export class RegisterPage extends LitElement {
         
         // Redirect to login after a delay
         setTimeout(() => {
-          router.navigate('/login');
+          simpleRouter.navigate('/login');
         }, 3000);
       } else {
         this.error = this.authStore.getState().error || 'Registration failed';
@@ -224,99 +219,120 @@ export class RegisterPage extends LitElement {
   }
 
   private handleLogin() {
-    router.navigate('/login');
+    simpleRouter.navigate('/login');
   }
 
   render() {
     return html`
       <div class="register-container">
-        <ui-card class="register-card">
-          <div slot="content">
+        <ui-card 
+          classes="bg-white border border-gray-200 rounded-lg shadow-sm p-4 w-full max-w-lg mx-auto"
+        >
             <div class="register-header">
               <h1 class="register-title">Create Account</h1>
               <p class="register-subtitle">Join thousands of users shortening their links</p>
             </div>
 
             ${this.error ? html`
-              <ui-alert variant="error" style="margin-bottom: 1.5rem;">
-                ${this.error}
-              </ui-alert>
+              <ui-alert 
+                variant="error" 
+                message="${this.error}" 
+                dismissible
+                @ui-alert-close="${() => this.error = null}"
+                classes="mb-6"
+                errorClasses="bg-red-50 border-red-200 text-red-800 p-3 rounded-md"
+              ></ui-alert>
             ` : ''}
 
             ${this.success ? html`
-              <ui-alert variant="success" style="margin-bottom: 1.5rem;">
-                ${this.success}
-              </ui-alert>
+              <ui-alert 
+                variant="success" 
+                message="${this.success}"
+                classes="mb-6"
+                successClasses="bg-green-50 border-green-200 text-green-800 p-3 rounded-md"
+              ></ui-alert>
             ` : ''}
 
             <form class="register-form" @submit=${this.handleRegister}>
+              <ui-input
+                label="Username"
+                name="username"
+                type="text"
+                placeholder="Choose a username"
+                required
+                classes="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              ></ui-input>
+
               <ui-input
                 label="Email Address"
                 name="email"
                 type="email"
                 placeholder="Enter your email"
                 required
+                classes="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               ></ui-input>
 
               <div class="form-row">
                 <ui-input
-                  label="Full Name"
-                  name="name"
-                  type="text"
-                  placeholder="Your name"
+                  label="Password"
+                  name="password"
+                  type="password"
+                  placeholder="Create a password"
+                  required
+                  classes="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
                 ></ui-input>
 
                 <ui-input
-                  label="Organization"
-                  name="organization"
-                  type="text"
-                  placeholder="Company (optional)"
+                  label="Confirm Password"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="Confirm your password"
+                  required
+                  classes="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
                 ></ui-input>
               </div>
 
               <ui-input
-                label="Password"
-                name="password"
-                type="password"
-                placeholder="Create a password"
-                required
-              ></ui-input>
-
-              <ui-input
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                required
+                label="Organization"
+                name="organization"
+                type="text"
+                placeholder="Your company or organization (optional)"
+                classes="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               ></ui-input>
 
               <div class="terms-section">
                 <div class="terms-row">
-                  <ui-checkbox name="agreeToTerms" required></ui-checkbox>
+                  <ui-checkbox 
+                    name="agreeToTerms" 
+                    required
+                    classes="mr-3 accent-blue-600"
+                  ></ui-checkbox>
                   <div class="terms-text">
-                    I agree to the <a href="/terms" target="_blank">Terms of Service</a> 
-                    and <a href="/privacy" target="_blank">Privacy Policy</a>
+                    I agree to the <a href="#" @click=${(e: Event) => e.preventDefault()}>Terms of Service</a> 
+                    and <a href="#" @click=${(e: Event) => e.preventDefault()}>Privacy Policy</a>
                   </div>
                 </div>
                 
                 <div class="terms-row">
-                  <ui-checkbox name="consentToDataProcessing" required></ui-checkbox>
+                  <ui-checkbox 
+                    name="consentToMarketing"
+                    classes="mr-3 accent-blue-600"
+                  ></ui-checkbox>
                   <div class="terms-text">
-                    I consent to the processing of my personal data for account creation 
-                    and service provision as described in the Privacy Policy
+                    I consent to receive marketing emails and social notifications about new features, 
+                    updates, and promotional content
                   </div>
                 </div>
               </div>
 
               <div class="form-actions">
                 <ui-button 
-                  type="submit" 
-                  variant="primary" 
-                  size="large"
-                  ?loading=${this.isLoading}
-                  style="width: 100%;"
+                  type="submit"
+                  ?disabled="${this.isLoading}"
+                  classes="w-full bg-blue-600 text-white py-2.5 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors text-sm"
+                  disabledClasses="opacity-50 cursor-not-allowed"
                 >
-                  Create Account
+                  ${this.isLoading ? 'Creating Account...' : 'Create Account'}
                 </ui-button>
               </div>
             </form>
@@ -327,21 +343,11 @@ export class RegisterPage extends LitElement {
 
             <div class="oauth-buttons">
               <ui-button 
-                variant="outline" 
-                style="width: 100%;"
                 @click=${() => this.handleOAuthRegister('google')}
+                classes="w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-md hover:bg-gray-50 font-medium transition-colors"
               >
                 <span style="margin-right: 0.5rem;">🔍</span>
                 Sign up with Google
-              </ui-button>
-              
-              <ui-button 
-                variant="outline" 
-                style="width: 100%;"
-                @click=${() => this.handleOAuthRegister('github')}
-              >
-                <span style="margin-right: 0.5rem;">📂</span>
-                Sign up with GitHub
               </ui-button>
             </div>
 
@@ -353,7 +359,6 @@ export class RegisterPage extends LitElement {
                 </a>
               </p>
             </div>
-          </div>
         </ui-card>
       </div>
     `;

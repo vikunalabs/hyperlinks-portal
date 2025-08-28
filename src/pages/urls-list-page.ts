@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { useUrlStore } from '../stores/url-store';
-import { router } from '../router';
+import { urlStore } from '../stores/url-store';
+import { simpleRouter } from '../router/simple-router';
 import type { UrlFilters } from '../types/url';
 
 @customElement('urls-list-page')
@@ -15,7 +15,7 @@ export class UrlsListPage extends LitElement {
   @state()
   private showFilters = false;
 
-  private urlStore = useUrlStore;
+  private urlStore = urlStore;
 
   static styles = css`
     :host {
@@ -251,7 +251,7 @@ export class UrlsListPage extends LitElement {
   }
 
   private handleCreateUrl() {
-    router.navigate('/urls/create');
+    simpleRouter.navigate('/urls/create');
   }
 
   private handleFilterChange(event: Event) {
@@ -301,7 +301,7 @@ export class UrlsListPage extends LitElement {
   }
 
   private handleViewUrl(urlId: string) {
-    router.navigate(`/urls/${urlId}`);
+    simpleRouter.navigate(`/urls/${urlId}`);
   }
 
   private formatDate(dateString: string) {
@@ -430,7 +430,7 @@ export class UrlsListPage extends LitElement {
         <div class="urls-table-container">
           ${this.isLoading ? html`
             <div style="padding: 3rem; text-align: center;">
-              <ui-spinner size="large"></ui-spinner>
+              <ui-loading-spinner size="large"></ui-loading-spinner>
             </div>
           ` : urls.length === 0 ? html`
             <div class="empty-state">

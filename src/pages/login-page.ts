@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { useAuthStore } from '../stores/auth-store';
-import { router } from '../router';
+import { authStore } from '../stores/auth-store';
+import { simpleRouter } from '../router/simple-router';
 import type { LoginCredentials } from '../types/auth';
 
 @customElement('login-page')
@@ -12,7 +12,13 @@ export class LoginPage extends LitElement {
   @state()
   private error: string | null = null;
 
-  private authStore = useAuthStore;
+  private authStore = authStore;
+
+  connectedCallback() {
+    super.connectedCallback();
+    console.log('[LoginPage] Connected - initial error:', typeof this.error, this.error);
+    console.log('[LoginPage] Auth store error:', typeof this.authStore.getState().error, this.authStore.getState().error);
+  }
 
   static styles = css`
     :host {
@@ -143,7 +149,7 @@ export class LoginPage extends LitElement {
       
       if (success) {
         // Router guard will handle redirect to dashboard
-        router.navigate('/dashboard');
+        simpleRouter.navigate('/dashboard');
       } else {
         this.error = this.authStore.getState().error || 'Login failed';
       }
@@ -160,97 +166,95 @@ export class LoginPage extends LitElement {
   }
 
   private handleForgotPassword() {
-    router.navigate('/forgot-password');
+    simpleRouter.navigate('/forgot-password');
   }
 
   private handleRegister() {
-    router.navigate('/register');
+    simpleRouter.navigate('/register');
   }
 
   render() {
     return html`
       <div class="login-container">
-        <ui-card class="login-card">
-          <div slot="content">
-            <div class="login-header">
-              <h1 class="login-title">Welcome Back</h1>
-              <p class="login-subtitle">Sign in to your account to continue</p>
-            </div>
+        <ui-card 
+          classes="bg-white border border-gray-200 rounded-lg shadow-sm p-4 w-full max-w-md mx-auto"
+        >
+          <div class="login-header">
+            <h1 class="login-title">Welcome Back</h1>
+            <p class="login-subtitle">Sign in to your account</p>
+          </div>
+          
+          ${this.error ? html`
+            <ui-alert 
+              variant="error" 
+              message="${this.error}"
+              dismissible
+              @ui-alert-close="${() => this.error = null}"
+              classes="mb-4"
+              errorClasses="bg-red-50 border-red-200 text-red-800 p-3 rounded-md"
+              iconClasses="text-red-500"
+              closeButtonClasses="text-red-500 hover:text-red-700"
+            ></ui-alert>
+          ` : ''}
 
-            ${this.error ? html`
-              <ui-alert variant="error" style="margin-bottom: 1.5rem;">
-                ${this.error}
-              </ui-alert>
-            ` : ''}
+          <form @submit="${this.handleLogin}" class="login-form">
+            <ui-input
+              type="email"
+              name="email"
+              label="Email"
+              placeholder="Enter your email"
+              required
+              classes="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            ></ui-input>
 
-            <form class="login-form" @submit=${this.handleLogin}>
-              <ui-input
-                label="Email Address"
-                name="email"
-                type="email"
-                placeholder="Enter your email"
-                required
-              ></ui-input>
+            <ui-input
+              type="password"
+              name="password"
+              label="Password"
+              placeholder="Enter your password"
+              required
+              classes="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            ></ui-input>
 
-              <ui-input
-                label="Password"
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                required
-              ></ui-input>
-
-              <div class="form-actions">
-                <ui-button 
-                  type="submit" 
-                  variant="primary" 
-                  size="large"
-                  ?loading=${this.isLoading}
-                  style="width: 100%;"
-                >
-                  Sign In
-                </ui-button>
-              </div>
-            </form>
-
-            <div class="forgot-password">
-              <a href="#" @click=${(e: Event) => { e.preventDefault(); this.handleForgotPassword(); }}>
-                Forgot your password?
-              </a>
-            </div>
-
-            <div class="divider">
-              <span>Or continue with</span>
-            </div>
-
-            <div class="oauth-buttons">
+            <div class="form-actions">
               <ui-button 
-                variant="outline" 
-                style="width: 100%;"
-                @click=${() => this.handleOAuthLogin('google')}
+                type="submit"
+                ?disabled="${this.isLoading}"
+                classes="w-full bg-blue-600 text-white py-2.5 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors text-sm"
+                disabledClasses="opacity-50 cursor-not-allowed"
               >
-                <span style="margin-right: 0.5rem;">🔍</span>
-                Continue with Google
-              </ui-button>
-              
-              <ui-button 
-                variant="outline" 
-                style="width: 100%;"
-                @click=${() => this.handleOAuthLogin('github')}
-              >
-                <span style="margin-right: 0.5rem;">📂</span>
-                Continue with GitHub
+                ${this.isLoading ? html`
+                  <ui-loading-spinner classes="w-4 h-4 mr-2 animate-spin"></ui-loading-spinner>
+                  Signing in...
+                ` : 'Sign In'}
               </ui-button>
             </div>
+          </form>
 
-            <div class="register-link">
-              <p>
-                Don't have an account? 
-                <a href="#" @click=${(e: Event) => { e.preventDefault(); this.handleRegister(); }}>
-                  Create one now
-                </a>
-              </p>
-            </div>
+          <div class="divider">
+            <span>or</span>
+          </div>
+
+          <div class="oauth-buttons">
+            <ui-button
+              @click="${() => this.handleOAuthLogin('google')}"
+              classes="w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-md hover:bg-gray-50 font-medium transition-colors"
+            >
+              Continue with Google
+            </ui-button>
+          </div>
+
+          <div class="forgot-password">
+            <a href="#" @click="${this.handleForgotPassword}">
+              Forgot your password?
+            </a>
+          </div>
+
+          <div class="register-link">
+            <span>Don't have an account? </span>
+            <a href="#" @click="${this.handleRegister}">
+              Sign up
+            </a>
           </div>
         </ui-card>
       </div>
