@@ -102,7 +102,7 @@ export interface AppState {
 
 // Notification type
 export interface Notification {
-  id: string;
+  id?: string;
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
   duration?: number;
