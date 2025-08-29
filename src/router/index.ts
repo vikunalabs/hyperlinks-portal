@@ -69,8 +69,8 @@ export class AppRouter {
 
   private setupRoutes(): void {
     routes.forEach(route => {
-      this.router.on(route.path, async () => {
-        await this.handleRoute(route);
+      this.router.on(route.path, async (match: any) => {
+        await this.handleRoute(route, match?.data);
       });
     });
   }
@@ -83,8 +83,8 @@ export class AppRouter {
     });
   }
 
-  private async handleRoute(route: RouteConfig): Promise<void> {
-    console.log(`[Router] Handling route: ${route.path}`, { protected: route.protected });
+  private async handleRoute(route: RouteConfig, params?: any): Promise<void> {
+    console.log(`[Router] Handling route: ${route.path}`, { protected: route.protected, params });
 
     // Set page title if provided
     if (route.title) {
@@ -113,9 +113,9 @@ export class AppRouter {
       return; // Guard handled the redirection
     }
 
-    // Execute route handler
+    // Execute route handler with parameters
     try {
-      route.handler();
+      route.handler(params);
     } catch (error) {
       console.error('[Router] Error executing route handler:', error);
       appStore.getState().showNotification({

@@ -37,10 +37,10 @@ export const authStore = createStore<AuthState>()((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      const response = await authService.register(data);
+      await authService.register(data);
       set({ 
-        user: response.user, 
-        isAuthenticated: true, 
+        user: null, 
+        isAuthenticated: false, 
         isLoading: false,
         error: null
       });

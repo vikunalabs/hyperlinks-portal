@@ -6,5 +6,13 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src')
     }
+  },
+  optimizeDeps: {
+    include: [
+      'lit',
+      'lit/decorators.js',
+      'lit/directives/class-map.js',
+      '@vikunalabs/ui-library'
+    ]
   }
 });
