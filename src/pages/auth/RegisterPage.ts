@@ -38,23 +38,19 @@ export class RegisterPage {
               required>
             </ui-input>
             
-            <ui-input 
+            <ui-password-input 
               name="password"
-              type="password"
               label="Password"
               placeholder="Enter a strong password"
-              required
-              show-toggle>
-            </ui-input>
+              required>
+            </ui-password-input>
             
-            <ui-input 
+            <ui-password-input 
               name="confirmPassword"
-              type="password"
               label="Confirm Password"
               placeholder="Confirm your password"
-              required
-              show-toggle>
-            </ui-input>
+              required>
+            </ui-password-input>
             
             <ui-input 
               name="name"
@@ -84,11 +80,9 @@ export class RegisterPage {
             <ui-button 
               type="submit" 
               variant="primary" 
-              size="large"
-              full-width
-              id="registerButton">
-              Create Account
-            </ui-button>
+              size="lg"
+              label="Create Account"
+              id="registerButton">Create Account</ui-button>
             
             <div class="auth-divider">
               <span>or</span>
@@ -96,18 +90,10 @@ export class RegisterPage {
             
             <ui-button 
               type="button" 
-              variant="outline" 
-              size="large"
-              full-width
-              id="googleSignUp">
-              <svg width="20" height="20" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Continue with Google
-            </ui-button>
+              variant="secondary" 
+              size="lg"
+              label="Continue with Google"
+              id="googleSignUp">Continue with Google</ui-button>
             
             <div class="auth-footer">
               <p>Already have an account? <a href="/login" id="loginLink">Sign in</a></p>
@@ -126,8 +112,13 @@ export class RegisterPage {
     if (!this.container) return;
 
     const registerForm = this.container.querySelector('#registerForm') as HTMLFormElement;
+    const registerButton = this.container.querySelector('#registerButton');
     const googleSignUpBtn = this.container.querySelector('#googleSignUp');
     const loginLink = this.container.querySelector('#loginLink');
+    
+    console.log('Registration page elements found:');
+    console.log('- registerForm:', !!registerForm);
+    console.log('- registerButton:', !!registerButton);
     
     // Handle form submission
     if (registerForm) {
@@ -135,6 +126,21 @@ export class RegisterPage {
       registerForm.addEventListener('submit', this.handleFormSubmit.bind(this));
     } else {
       console.error('Register form not found!');
+    }
+
+    // Also add click handler to button as fallback
+    if (registerButton) {
+      console.log('Register button found, adding click listener');
+      registerButton.addEventListener('click', () => {
+        console.log('Register button clicked');
+        if (registerForm) {
+          // Trigger form submission
+          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+          registerForm.dispatchEvent(submitEvent);
+        }
+      });
+    } else {
+      console.error('Register button not found!');
     }
     
     // Handle Google OAuth
@@ -145,23 +151,21 @@ export class RegisterPage {
   }
 
   private async handleFormSubmit(event: Event): Promise<void> {
-    console.log('Form submit handler called');
+    console.log('Registration form submit handler called');
     event.preventDefault();
     
     const form = event.target as HTMLFormElement;
-    console.log('Form element:', form);
     
-    // Extract values directly from UI components
+    // Extract values directly from components (FormData not working yet with lit-ui-library)
     const usernameInput = form.querySelector('ui-input[name="username"]') as any;
     const emailInput = form.querySelector('ui-input[name="email"]') as any;
-    const passwordInput = form.querySelector('ui-input[name="password"]') as any;
-    const confirmPasswordInput = form.querySelector('ui-input[name="confirmPassword"]') as any;
+    const passwordInput = form.querySelector('ui-password-input[name="password"]') as any;
+    const confirmPasswordInput = form.querySelector('ui-password-input[name="confirmPassword"]') as any;
     const nameInput = form.querySelector('ui-input[name="name"]') as any;
     const organizationInput = form.querySelector('ui-input[name="organization"]') as any;
     const termsCheckbox = form.querySelector('ui-checkbox[name="acceptTerms"]') as any;
     const subscribeCheckbox = form.querySelector('ui-checkbox[name="subscribe"]') as any;
     
-    // Extract form data from UI components
     const password = passwordInput?.value || '';
     const confirmPassword = confirmPasswordInput?.value || '';
     
@@ -175,7 +179,7 @@ export class RegisterPage {
       marketingConsent: subscribeCheckbox?.checked || false
     };
 
-    console.log('Form submission data:', registrationData);
+    console.log('Registration form submission data:', registrationData);
 
     // Clear previous errors
     this.clearErrors();
@@ -207,6 +211,7 @@ export class RegisterPage {
     const submitBtn = this.container?.querySelector('#registerButton') as any;
     if (submitBtn) {
       submitBtn.disabled = true;
+      submitBtn.loading = true;
       submitBtn.textContent = 'Creating Account...';
     }
 
@@ -226,6 +231,7 @@ export class RegisterPage {
       // Re-enable submit button
       if (submitBtn) {
         submitBtn.disabled = false;
+        submitBtn.loading = false;
         submitBtn.textContent = 'Create Account';
       }
     }

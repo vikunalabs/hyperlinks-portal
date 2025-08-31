@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "echo 'No tests configured yet'"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -14,7 +15,7 @@
     "vite": "^7.1.2"
   },
   "dependencies": {
-    "@vikunalabs/ui-library": "file:../../@vikunalabs/ui-library",
+    "@vikunalabs/lit-ui-library": "file:../../@vikunalabs/lit-ui-library",
     "axios": "^1.11.0",
     "lit": "^3.3.1",
     "navigo": "^8.11.1",

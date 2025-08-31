@@ -1,4 +1,4 @@
-// Reset password page using UI library components
+// Reset password page using building block UI components
 
 import { authService } from '../../services/auth.service';
 import { appStore } from '../../stores/app.store';
@@ -16,24 +16,44 @@ export class ResetPasswordPage {
     this.container = target;
     
     target.innerHTML = `
-      <auth-reset-password-page
-        title="Reset Your Password"
-        subtitle="Enter your new password below"
-        instructions="Choose a strong password that you haven't used before. Your password will be used to secure your account."
-        new-password-label="New Password"
-        confirm-password-label="Confirm New Password"
-        submit-label="Reset Password"
-        show-password-strength="true"
-        password-min-length="8"
-        show-login-link="true"
-        login-text="Back to Sign In"
-        success-message="Your password has been reset successfully! You can now sign in with your new password."
-        logo-src="/logo.png"
-        company-name="Hyperlinks Management Platform"
-        layout="centered"
-        background-variant="gradient"
-        auto-redirect-delay="3000"
-      ></auth-reset-password-page>
+      <div class="auth-container">
+        <ui-card class="auth-card">
+          <div class="auth-header">
+            <h1>Reset Your Password</h1>
+            <p>Enter your new password below</p>
+            <p class="instructions">Choose a strong password that you haven't used before. Your password will be used to secure your account.</p>
+          </div>
+          
+          <form id="resetPasswordForm" class="auth-form">
+            <ui-password-input 
+              name="newPassword"
+              label="New Password"
+              placeholder="Enter your new password"
+              required>
+            </ui-password-input>
+            
+            <ui-password-input 
+              name="confirmPassword"
+              label="Confirm New Password"
+              placeholder="Confirm your new password"
+              required>
+            </ui-password-input>
+            
+            <ui-button 
+              type="submit" 
+              variant="primary" 
+              size="lg"
+              label="Reset Password"
+              id="resetButton">Reset Password</ui-button>
+              
+            <div class="auth-footer">
+              <p><a href="/login" id="backToLoginLink">← Back to Sign In</a></p>
+            </div>
+            
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+          </form>
+        </ui-card>
+      </div>
     `;
 
     this.bindEvents();
@@ -42,54 +62,113 @@ export class ResetPasswordPage {
   private bindEvents(): void {
     if (!this.container) return;
 
-    const resetPage = this.container.querySelector('auth-reset-password-page');
+    const resetForm = this.container.querySelector('#resetPasswordForm') as HTMLFormElement;
+    const resetButton = this.container.querySelector('#resetButton');
+    const backToLoginLink = this.container.querySelector('#backToLoginLink');
     
-    // Handle password reset form submission
-    resetPage?.addEventListener('auth-reset-password-submit', this.handleResetSubmit.bind(this));
+    // Handle form submission
+    resetForm?.addEventListener('submit', this.handleFormSubmit.bind(this));
+
+    // Also add click handler to button as fallback
+    if (resetButton) {
+      resetButton.addEventListener('click', () => {
+        if (resetForm) {
+          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+          resetForm.dispatchEvent(submitEvent);
+        }
+      });
+    }
     
     // Handle navigation to login
-    resetPage?.addEventListener('auth-navigate-login', this.handleBackToLogin.bind(this));
+    backToLoginLink?.addEventListener('click', this.handleBackToLogin.bind(this));
   }
 
-  private async handleResetSubmit(event: Event): Promise<void> {
-    const customEvent = event as CustomEvent<{ newPassword: string; confirmPassword: string }>;
-    const { newPassword } = customEvent.detail;
+  private async handleFormSubmit(event: Event): Promise<void> {
+    event.preventDefault();
+    
+    const form = event.target as HTMLFormElement;
+    
+    // Extract values directly from components
+    const newPasswordInput = form.querySelector('ui-password-input[name="newPassword"]') as any;
+    const confirmPasswordInput = form.querySelector('ui-password-input[name="confirmPassword"]') as any;
+    
+    const newPassword = newPasswordInput?.value || '';
+    const confirmPassword = confirmPasswordInput?.value || '';
 
-    const resetPage = this.container?.querySelector('auth-reset-password-page') as any;
+    // Clear previous errors
+    this.clearErrors();
+
+    // Validate required fields
+    if (!newPassword || !confirmPassword) {
+      this.showError('Please fill in all required fields');
+      return;
+    }
+
+    // Validate password confirmation
+    if (newPassword !== confirmPassword) {
+      this.showError('Passwords do not match');
+      return;
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      this.showError('Password must be at least 8 characters long');
+      return;
+    }
+
+    // Disable submit button
+    const submitBtn = this.container?.querySelector('#resetButton') as any;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.loading = true;
+      submitBtn.textContent = 'Resetting Password...';
+    }
 
     try {
       await authService.resetPassword(this.token, newPassword);
       
-      // Success - show success state on component
-      if (resetPage?.showSuccess) {
-        resetPage.showSuccess();
-      }
-
       appStore.getState().showNotification({
         type: 'success',
         message: 'Password reset successfully! Please sign in with your new password.',
         duration: 5000
       });
 
-    } catch (error) {
-      // Error handling - set form error
-      if (resetPage?.setFormError) {
-        resetPage.setFormError(error instanceof Error ? error.message : 'Password reset failed');
-      }
+      // Redirect to login after successful reset
+      setTimeout(() => {
+        appRouter.navigate(ROUTES.LOGIN);
+      }, 2000);
 
-      appStore.getState().showNotification({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Password reset failed',
-        duration: 5000
-      });
+    } catch (error) {
+      this.showError(error instanceof Error ? error.message : 'Password reset failed');
+    } finally {
+      // Re-enable submit button
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.loading = false;
+        submitBtn.textContent = 'Reset Password';
+      }
     }
   }
 
-  private handleBackToLogin(event?: Event): void {
-    if (event) {
-      event.preventDefault();
-    }
+  private handleBackToLogin(event: Event): void {
+    event.preventDefault();
     appRouter.navigate(ROUTES.LOGIN);
+  }
+
+  private showError(message: string): void {
+    const errorDiv = this.container?.querySelector('#errorMessage') as HTMLElement;
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+  }
+
+  private clearErrors(): void {
+    const errorDiv = this.container?.querySelector('#errorMessage') as HTMLElement;
+    if (errorDiv) {
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+    }
   }
 
   public destroy(): void {

@@ -12,7 +12,7 @@ export default defineConfig({
       'lit',
       'lit/decorators.js',
       'lit/directives/class-map.js',
-      '@vikunalabs/ui-library'
+      '@vikunalabs/lit-ui-library'
     ]
   }
 });

@@ -20,6 +20,7 @@ export const ROUTES = {
 } as const;
 
 // Import page components
+import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
@@ -53,11 +54,11 @@ const renderPage = (PageClass: any, ...args: any[]) => {
 // Route handlers with actual page rendering
 const routeHandlers = {
   home: () => {
-    console.log('[Router] Navigating to Dashboard');
-    renderPage(DashboardPage);
+    console.log('[Router] Navigating to Home Page');
+    renderPage(HomePage);
   },
   dashboard: () => {
-    console.log('[Router] Navigating to Dashboard via /dashboard');
+    console.log('[Router] Navigating to Dashboard');
     renderPage(DashboardPage);
   },
   login: () => {
@@ -100,8 +101,8 @@ export const routes: RouteConfig[] = [
   {
     path: ROUTES.HOME,
     handler: routeHandlers.home,
-    protected: true,
-    title: 'Dashboard'
+    protected: false,
+    title: 'Hyperlinks Management Portal'
   },
   {
     path: ROUTES.DASHBOARD,

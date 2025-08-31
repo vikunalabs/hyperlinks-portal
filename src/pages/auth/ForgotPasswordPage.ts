@@ -18,19 +18,22 @@ export class ForgotPasswordPage {
             <p>We'll help you get back into your account</p>
             <p class="instructions">Enter your email address and we'll send you a link to reset your password.</p>
           </div>
-          <form class="forgot-password-form">
-            <div class="form-group">
-              <ui-input
-                id="email"
-                type="email"
-                placeholder="Enter your email address"
-                required="true"
-                auto-focus="true"
-              ></ui-input>
-            </div>
-            <ui-button type="submit" variant="primary" full-width="true">
-              Send Reset Link
-            </ui-button>
+          <form id="forgotPasswordForm" class="forgot-password-form">
+            <ui-input
+              name="email"
+              type="email"
+              label="Email Address"
+              placeholder="Enter your email address"
+              required
+              autofocus>
+            </ui-input>
+            
+            <ui-button 
+              type="submit" 
+              variant="primary" 
+              size="lg"
+              label="Send Reset Link"
+              id="submitButton">Send Reset Link</ui-button>
           </form>
           <div class="auth-links">
             <a href="#" class="back-to-login">Back to Sign In</a>
@@ -46,12 +49,24 @@ export class ForgotPasswordPage {
   private bindEvents(): void {
     if (!this.container) return;
 
-    const form = this.container.querySelector('.forgot-password-form');
+    const form = this.container.querySelector('.forgot-password-form') as HTMLFormElement;
+    const submitButton = this.container.querySelector('ui-button[type="submit"]');
     const backToLogin = this.container.querySelector('.back-to-login');
     const registerLink = this.container.querySelector('.register-link');
     
     // Handle form submission
     form?.addEventListener('submit', this.handleFormSubmit.bind(this));
+
+    // Also add click handler to button as fallback
+    if (submitButton) {
+      submitButton.addEventListener('click', () => {
+        if (form) {
+          // Trigger form submission
+          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+          form.dispatchEvent(submitEvent);
+        }
+      });
+    }
     
     // Handle navigation events
     backToLogin?.addEventListener('click', this.handleNavigateLogin.bind(this));
@@ -61,7 +76,9 @@ export class ForgotPasswordPage {
   private async handleFormSubmit(event: Event): Promise<void> {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
-    const emailInput = form.querySelector('#email') as any;
+    
+    // Extract value directly from component (FormData not working yet with lit-ui-library)
+    const emailInput = form.querySelector('ui-input[name="email"]') as any;
     const email = emailInput?.value;
 
     if (!email) {

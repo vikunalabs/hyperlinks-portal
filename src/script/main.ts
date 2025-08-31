@@ -1,7 +1,6 @@
 import '../style/main.css'
 
-// Import UI library components
-import '@vikunalabs/ui-library';
+import '@vikunalabs/lit-ui-library';
 
 
 // Import stores and router
