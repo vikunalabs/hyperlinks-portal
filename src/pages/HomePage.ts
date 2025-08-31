@@ -1,7 +1,7 @@
 // src/pages/HomePage.ts
 // Public home page for unauthenticated users
 
-import { appRouter, ROUTES } from '../router';
+import { modalService } from '../services';
 
 export class HomePage {
   private container: HTMLElement | null = null;
@@ -61,6 +61,14 @@ export class HomePage {
     `;
 
     this.bindEvents();
+    this.initializeAuthModals();
+  }
+
+  private initializeAuthModals(): void {
+    if (!this.container) return;
+    
+    // Initialize auth modals via modal service
+    modalService.initializeAuthModals(this.container);
   }
 
   private bindEvents(): void {
@@ -71,23 +79,23 @@ export class HomePage {
     const getStartedButton = this.container.querySelector('#getStartedButton');
     const learnMoreButton = this.container.querySelector('#learnMoreButton');
 
-    // Navigation buttons
+    // Navigation buttons - show modals instead of navigating
     loginButton?.addEventListener('click', () => {
-      appRouter.navigate(ROUTES.LOGIN);
+      modalService.showLogin();
     });
 
     registerButton?.addEventListener('click', () => {
-      appRouter.navigate(ROUTES.REGISTER);
+      modalService.showRegister();
     });
 
     // Hero action buttons
     getStartedButton?.addEventListener('click', () => {
-      appRouter.navigate(ROUTES.REGISTER);
+      modalService.showRegister();
     });
 
     learnMoreButton?.addEventListener('click', () => {
-      // For now, just scroll to more info or navigate to register
-      appRouter.navigate(ROUTES.REGISTER);
+      // For now, show register modal
+      modalService.showRegister();
     });
   }
 

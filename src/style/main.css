@@ -1,5 +1,8 @@
 /* src/style/main.css */
 
+/* Import auth modal styles */
+@import './auth-modals.css';
+
 /* Global styles for the application */
 * {
   box-sizing: border-box;

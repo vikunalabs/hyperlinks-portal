@@ -1,0 +1,114 @@
+/* src/style/auth-modals.css */
+/* Styles for authentication modals */
+
+/* Auth modal content styling */
+.auth-modal-content {
+  padding: 0;
+}
+
+.auth-subtitle {
+  margin: 0 0 1.5rem 0;
+  color: var(--ui-color-text-secondary, #666);
+  font-size: 0.95rem;
+}
+
+/* Auth form styling */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Form options (remember me, forgot password) */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -0.5rem 0 0.5rem 0;
+}
+
+.forgot-password {
+  color: var(--ui-color-primary, #007bff);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.forgot-password:hover {
+  color: var(--ui-color-primary-dark, #0056b3);
+  text-decoration: underline;
+}
+
+/* Auth divider */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.5rem 0;
+  color: var(--ui-color-text-secondary, #666);
+  font-size: 0.9rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--ui-color-border, #e0e0e0);
+}
+
+.auth-divider span {
+  padding: 0 1rem;
+}
+
+/* Modal footer styling */
+.auth-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Error message styling */
+.error-message {
+  padding: 0.75rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.375rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+/* Responsive adjustments for modals */
+@media (max-width: 640px) {
+  .auth-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .auth-modal-footer ui-button {
+    width: 100%;
+  }
+  
+  .form-options {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+/* Auth modal containers - ensure they're positioned correctly */
+#login-modal-container,
+#register-modal-container {
+  position: relative;
+  z-index: 1000;
+}
+
+/* Make sure the modal is properly sized */
+ui-modal[id="loginModal"],
+ui-modal[id="registerModal"] {
+  --modal-max-width: 480px;
+  --modal-padding: 1.5rem;
+}

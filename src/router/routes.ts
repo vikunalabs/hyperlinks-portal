@@ -22,13 +22,12 @@ export const ROUTES = {
 
 // Import page components
 import { HomePage } from '../pages/HomePage';
-import { LoginPage } from '../pages/auth/LoginPage';
-import { RegisterPage } from '../pages/auth/RegisterPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
 import { ConfirmAccountPage } from '../pages/auth/ConfirmAccountPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { ResendVerificationPage } from '../pages/auth/ResendVerificationPage';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
+import { modalService } from '../services';
 
 // Global variable to track current page instance for cleanup
 let currentPageInstance: any = null;
@@ -63,12 +62,18 @@ const routeHandlers = {
     renderPage(DashboardPage);
   },
   login: () => {
-    console.log('[Router] Navigating to Login');
-    renderPage(LoginPage);
+    console.log('[Router] Showing Login Modal');
+    // Render home page and show login modal
+    renderPage(HomePage);
+    // Use setTimeout to ensure the page is rendered before showing modal
+    setTimeout(() => modalService.showLogin(), 100);
   },
   register: () => {
-    console.log('[Router] Navigating to Register');
-    renderPage(RegisterPage);
+    console.log('[Router] Showing Register Modal');
+    // Render home page and show register modal
+    renderPage(HomePage);
+    // Use setTimeout to ensure the page is rendered before showing modal
+    setTimeout(() => modalService.showRegister(), 100);
   },
   forgotPassword: () => {
     console.log('[Router] Navigating to Forgot Password');

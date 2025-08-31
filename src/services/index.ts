@@ -3,6 +3,7 @@
 export { authService } from './auth.service';
 export { csrfService } from './csrf.service';
 export { HttpService } from './http.service';
+export { modalService } from './modal.service';
 
 // Service types
 export type { 
