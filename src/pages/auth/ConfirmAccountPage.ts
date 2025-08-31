@@ -8,6 +8,7 @@ export class ConfirmAccountPage {
   private container: HTMLElement | null = null;
   private token: string;
   private verificationStatus: 'verifying' | 'success' | 'error' = 'verifying';
+  private redirectTimer: NodeJS.Timeout | null = null;
 
   constructor(token: string) {
     this.token = token;
@@ -42,6 +43,10 @@ export class ConfirmAccountPage {
               label="Continue to Sign In"
               id="continueButton"
               style="display: none;">Continue to Sign In</ui-button>
+            
+            <div id="autoRedirectMessage" class="auto-redirect-message" style="display: none; text-align: center; margin: 10px 0; font-size: 0.9em; color: #666;">
+              Automatically redirecting to login in <span id="countdown">5</span> seconds...
+            </div>
             
             <div class="auth-links">
               <a href="#" id="loginLink">Go to Sign In</a>
@@ -97,7 +102,7 @@ export class ConfirmAccountPage {
     }
   }
 
-  private updateStatus(status: 'success' | 'error', message?: string): void {
+  private updateStatus(status: 'success' | 'error'): void {
     this.verificationStatus = status;
     
     const statusMessageEl = this.container?.querySelector('#statusMessage');
@@ -105,6 +110,7 @@ export class ConfirmAccountPage {
     const actionButtonsEl = this.container?.querySelector('#actionButtons');
     const continueButtonEl = this.container?.querySelector('#continueButton');
     const resendLinkEl = this.container?.querySelector('#resendLink');
+    const autoRedirectMessageEl = this.container?.querySelector('#autoRedirectMessage');
     
     if (statusMessageEl) {
       statusMessageEl.textContent = status === 'success' 
@@ -117,17 +123,46 @@ export class ConfirmAccountPage {
     }
     
     if (actionButtonsEl) {
-      actionButtonsEl.style.display = 'block';
+      (actionButtonsEl as HTMLElement).style.display = 'block';
     }
     
     if (continueButtonEl && status === 'success') {
-      continueButtonEl.style.display = 'block';
+      (continueButtonEl as HTMLElement).style.display = 'block';
     }
     
     // Only show resend link on error, hide on success
     if (resendLinkEl) {
-      resendLinkEl.style.display = status === 'error' ? 'inline' : 'none';
+      (resendLinkEl as HTMLElement).style.display = status === 'error' ? 'inline' : 'none';
     }
+    
+    // Start auto-redirect countdown on success
+    if (status === 'success' && autoRedirectMessageEl) {
+      this.startAutoRedirectCountdown();
+    }
+  }
+
+  private startAutoRedirectCountdown(): void {
+    const autoRedirectMessageEl = this.container?.querySelector('#autoRedirectMessage') as HTMLElement;
+    const countdownEl = this.container?.querySelector('#countdown') as HTMLElement;
+    
+    if (!autoRedirectMessageEl || !countdownEl) return;
+    
+    autoRedirectMessageEl.style.display = 'block';
+    let countdown = 5;
+    
+    const updateCountdown = () => {
+      countdownEl.textContent = countdown.toString();
+      
+      if (countdown <= 0) {
+        this.handleContinue();
+        return;
+      }
+      
+      countdown--;
+      this.redirectTimer = setTimeout(updateCountdown, 1000);
+    };
+    
+    updateCountdown();
   }
 
   private async performVerification(): Promise<void> {
@@ -179,6 +214,12 @@ export class ConfirmAccountPage {
   }
 
   public destroy(): void {
+    // Clean up timer
+    if (this.redirectTimer) {
+      clearTimeout(this.redirectTimer);
+      this.redirectTimer = null;
+    }
+    
     // Clean up any event listeners or resources
     this.container = null;
   }

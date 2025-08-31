@@ -50,7 +50,7 @@ export class LoginPage {
             <ui-button 
               type="submit" 
               variant="primary" 
-              size="lg"
+              size="md"
               label="Sign In"
               id="loginButton">Sign In</ui-button>
             
@@ -61,7 +61,7 @@ export class LoginPage {
             <ui-button 
               type="button" 
               variant="secondary" 
-              size="lg"
+              size="md"
               label="Continue with Google"
               id="googleSignIn">Continue with Google</ui-button>
             
@@ -89,17 +89,15 @@ export class LoginPage {
     
     // Handle form submission
     loginForm?.addEventListener('submit', this.handleFormSubmit.bind(this));
-
-    // Also add click handler to button as fallback
-    if (loginButton) {
-      loginButton.addEventListener('click', () => {
-        if (loginForm) {
-          // Trigger form submission
-          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-          loginForm.dispatchEvent(submitEvent);
-        }
-      });
-    }
+    
+    // Handle button click (workaround for mouse click issue)
+    loginButton?.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (loginForm) {
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        loginForm.dispatchEvent(submitEvent);
+      }
+    });
     
     // Handle Google OAuth
     googleSignInBtn?.addEventListener('click', this.handleGoogleSignIn.bind(this));

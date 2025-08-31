@@ -4,15 +4,13 @@ import { authStore } from '../../stores/auth.store';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';
 import { authService } from '../../services/auth.service';
-import { validateUsername, validateEmail, validatePassword, validatePasswordConfirmation, validateRequired } from '../../utils';
+import { validateUsername, validateEmail, validatePassword, validatePasswordConfirmation } from '../../utils';
 
 export class RegisterPage {
   private container: HTMLElement | null = null;
 
   public render(target: HTMLElement): void {
     this.container = target;
-    
-    console.log('RegisterPage rendering...');
     
     target.innerHTML = `
       <div class="auth-container">
@@ -74,7 +72,7 @@ export class RegisterPage {
             <ui-button 
               type="submit" 
               variant="primary" 
-              size="lg"
+              size="md"
               label="Create Account"
               id="registerButton">Create Account</ui-button>
             
@@ -85,7 +83,7 @@ export class RegisterPage {
             <ui-button 
               type="button" 
               variant="secondary" 
-              size="lg"
+              size="md"
               label="Continue with Google"
               id="googleSignUp">Continue with Google</ui-button>
             
@@ -110,32 +108,17 @@ export class RegisterPage {
     const googleSignUpBtn = this.container.querySelector('#googleSignUp');
     const loginLink = this.container.querySelector('#loginLink');
     
-    console.log('Registration page elements found:');
-    console.log('- registerForm:', !!registerForm);
-    console.log('- registerButton:', !!registerButton);
-    
     // Handle form submission
-    if (registerForm) {
-      console.log('Register form found, adding event listener');
-      registerForm.addEventListener('submit', this.handleFormSubmit.bind(this));
-    } else {
-      console.error('Register form not found!');
-    }
-
-    // Also add click handler to button as fallback
-    if (registerButton) {
-      console.log('Register button found, adding click listener');
-      registerButton.addEventListener('click', () => {
-        console.log('Register button clicked');
-        if (registerForm) {
-          // Trigger form submission
-          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-          registerForm.dispatchEvent(submitEvent);
-        }
-      });
-    } else {
-      console.error('Register button not found!');
-    }
+    registerForm?.addEventListener('submit', this.handleFormSubmit.bind(this));
+    
+    // Handle button click (workaround for mouse click issue)
+    registerButton?.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (registerForm) {
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        registerForm.dispatchEvent(submitEvent);
+      }
+    });
     
     // Handle Google OAuth
     googleSignUpBtn?.addEventListener('click', this.handleGoogleSignUp.bind(this));
@@ -145,7 +128,6 @@ export class RegisterPage {
   }
 
   private async handleFormSubmit(event: Event): Promise<void> {
-    console.log('Registration form submit handler called');
     event.preventDefault();
     
     const form = event.target as HTMLFormElement;
@@ -171,7 +153,6 @@ export class RegisterPage {
       marketingConsent: subscribeCheckbox?.checked || false
     };
 
-    console.log('Registration form submission data:', registrationData);
 
     // Clear previous errors
     this.clearErrors();

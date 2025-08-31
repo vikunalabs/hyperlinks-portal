@@ -3,7 +3,7 @@
 import { authService } from '../../services/auth.service';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';
-import { validatePassword, validatePasswordConfirmation } from '../../utils';
+import { validatePassword, validatePasswordConfirmation, validateRequired } from '../../utils';
 
 export class ResetPasswordPage {
   private container: HTMLElement | null = null;
@@ -11,6 +11,19 @@ export class ResetPasswordPage {
 
   constructor(token: string) {
     this.token = token;
+    this.validateToken();
+  }
+
+  private validateToken(): void {
+    const tokenValidation = validateRequired(this.token, 'Reset token');
+    if (!tokenValidation.isValid) {
+      appStore.getState().showNotification({
+        type: 'error',
+        message: 'Invalid or missing reset token. Please request a new password reset.',
+        duration: 5000
+      });
+      appRouter.navigate(ROUTES.FORGOT_PASSWORD);
+    }
   }
 
   public render(target: HTMLElement): void {
@@ -43,7 +56,7 @@ export class ResetPasswordPage {
             <ui-button 
               type="submit" 
               variant="primary" 
-              size="lg"
+              size="md"
               label="Reset Password"
               id="resetButton">Reset Password</ui-button>
               
@@ -69,16 +82,15 @@ export class ResetPasswordPage {
     
     // Handle form submission
     resetForm?.addEventListener('submit', this.handleFormSubmit.bind(this));
-
-    // Also add click handler to button as fallback
-    if (resetButton) {
-      resetButton.addEventListener('click', () => {
-        if (resetForm) {
-          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-          resetForm.dispatchEvent(submitEvent);
-        }
-      });
-    }
+    
+    // Handle button click (workaround for mouse click issue)
+    resetButton?.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (resetForm) {
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        resetForm.dispatchEvent(submitEvent);
+      }
+    });
     
     // Handle navigation to login
     backToLoginLink?.addEventListener('click', this.handleBackToLogin.bind(this));
@@ -129,10 +141,8 @@ export class ResetPasswordPage {
         duration: 5000
       });
 
-      // Redirect to login after successful reset
-      setTimeout(() => {
-        appRouter.navigate(ROUTES.LOGIN);
-      }, 2000);
+      // Redirect to login immediately
+      appRouter.navigate(ROUTES.LOGIN);
 
     } catch (error) {
       this.showError(error instanceof Error ? error.message : 'Password reset failed');

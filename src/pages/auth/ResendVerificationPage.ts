@@ -37,7 +37,7 @@ export class ResendVerificationPage {
           ${isPostRegistration ? `
             <div class="instructions">
               <p>${instructions}</p>
-              ${this.email ? `<p><strong>Email:</strong> ${this.email}</p>` : ''}
+              ${this.email ? `<p><strong>Email:</strong> ${this.maskEmail(this.email)} <button type="button" class="show-email-btn" style="font-size: 0.8em; padding: 2px 6px; margin-left: 8px;">Show</button></p>` : ''}
             </div>
             
             <div class="resend-section">
@@ -99,12 +99,28 @@ export class ResendVerificationPage {
     const resendButton = this.container.querySelector('#resendButton');
     const loginLink = this.container.querySelector('#loginLink');
     const registerLink = this.container.querySelector('#registerLink');
+    const showEmailBtn = this.container.querySelector('.show-email-btn');
     
     // Handle form submission (for non-post-registration case)
     resendForm?.addEventListener('submit', this.handleFormSubmit.bind(this));
     
-    // Handle resend button click (for post-registration case)
-    resendButton?.addEventListener('click', this.handleResendClick.bind(this));
+    // Handle button click (workaround for mouse click issue)
+    resendButton?.addEventListener('click', (event) => {
+      event.preventDefault();
+      
+      // For post-registration case (no form)
+      if (!resendForm) {
+        this.handleResendClick(event);
+        return;
+      }
+      
+      // For form case - dispatch submit event
+      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+      resendForm.dispatchEvent(submitEvent);
+    });
+    
+    // Handle email show/hide toggle
+    showEmailBtn?.addEventListener('click', this.handleToggleEmail.bind(this));
     
     // Handle navigation
     loginLink?.addEventListener('click', this.handleNavigateLogin.bind(this));
@@ -160,6 +176,9 @@ export class ResendVerificationPage {
         duration: 5000
       });
 
+      // Navigate back to login immediately
+      appRouter.navigate(ROUTES.LOGIN);
+
     } catch (error) {
       let errorMessage = 'Failed to send verification email';
       
@@ -210,6 +229,42 @@ export class ResendVerificationPage {
     if (errorDiv) {
       errorDiv.style.display = 'none';
       errorDiv.textContent = '';
+    }
+  }
+
+  private maskEmail(email: string): string {
+    if (!email || !email.includes('@')) return email;
+    
+    const [localPart, domain] = email.split('@');
+    if (localPart.length <= 2) {
+      return `${localPart[0]}***@${domain}`;
+    }
+    
+    const visibleChars = Math.max(1, Math.min(3, Math.floor(localPart.length / 3)));
+    const maskedLocal = localPart.substring(0, visibleChars) + 
+                       '*'.repeat(Math.max(3, localPart.length - visibleChars));
+    
+    return `${maskedLocal}@${domain}`;
+  }
+
+  private handleToggleEmail(event: Event): void {
+    event.preventDefault();
+    
+    const button = event.target as HTMLButtonElement;
+    const emailText = button.parentElement?.querySelector('strong')?.nextSibling;
+    
+    if (emailText && this.email) {
+      const isCurrentlyMasked = button.textContent === 'Show';
+      
+      if (isCurrentlyMasked) {
+        // Show full email
+        emailText.textContent = ` ${this.email} `;
+        button.textContent = 'Hide';
+      } else {
+        // Mask email
+        emailText.textContent = ` ${this.maskEmail(this.email)} `;
+        button.textContent = 'Show';
+      }
     }
   }
 

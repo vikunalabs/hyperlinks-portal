@@ -3,6 +3,7 @@
 import { authService } from '../../services/auth.service';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';
+import { validateEmail } from '../../utils';
 
 export class ForgotPasswordPage {
   private container: HTMLElement | null = null;
@@ -12,13 +13,13 @@ export class ForgotPasswordPage {
     
     target.innerHTML = `
       <div class="auth-container">
-        <div class="auth-card">
+        <ui-card class="auth-card">
           <div class="auth-header">
             <h1>Reset your password</h1>
             <p>We'll help you get back into your account</p>
             <p class="instructions">Enter your email address and we'll send you a link to reset your password.</p>
           </div>
-          <form id="forgotPasswordForm" class="forgot-password-form">
+          <form id="forgotPasswordForm" class="auth-form">
             <ui-input
               name="email"
               type="email"
@@ -31,15 +32,18 @@ export class ForgotPasswordPage {
             <ui-button 
               type="submit" 
               variant="primary" 
-              size="lg"
+              size="md"
               label="Send Reset Link"
               id="submitButton">Send Reset Link</ui-button>
+            
+            <div class="auth-footer">
+              <p><a href="/login" id="loginLink">← Back to Sign In</a></p>
+              <p>Don't have an account? <a href="/register" id="registerLink">Sign up</a></p>
+            </div>
+            
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
           </form>
-          <div class="auth-links">
-            <a href="#" class="back-to-login">Back to Sign In</a>
-            <a href="#" class="register-link">Don't have an account? Sign up</a>
-          </div>
-        </div>
+        </ui-card>
       </div>
     `;
 
@@ -49,27 +53,25 @@ export class ForgotPasswordPage {
   private bindEvents(): void {
     if (!this.container) return;
 
-    const form = this.container.querySelector('.forgot-password-form') as HTMLFormElement;
-    const submitButton = this.container.querySelector('ui-button[type="submit"]');
-    const backToLogin = this.container.querySelector('.back-to-login');
-    const registerLink = this.container.querySelector('.register-link');
+    const form = this.container.querySelector('#forgotPasswordForm') as HTMLFormElement;
+    const submitButton = this.container.querySelector('#submitButton');
+    const loginLink = this.container.querySelector('#loginLink');
+    const registerLink = this.container.querySelector('#registerLink');
     
     // Handle form submission
     form?.addEventListener('submit', this.handleFormSubmit.bind(this));
 
-    // Also add click handler to button as fallback
-    if (submitButton) {
-      submitButton.addEventListener('click', () => {
-        if (form) {
-          // Trigger form submission
-          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-          form.dispatchEvent(submitEvent);
-        }
-      });
-    }
+    // Handle button click (workaround for mouse click issue)
+    submitButton?.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (form) {
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        form.dispatchEvent(submitEvent);
+      }
+    });
     
     // Handle navigation events
-    backToLogin?.addEventListener('click', this.handleNavigateLogin.bind(this));
+    loginLink?.addEventListener('click', this.handleNavigateLogin.bind(this));
     registerLink?.addEventListener('click', this.handleNavigateRegister.bind(this));
   }
 
@@ -81,12 +83,18 @@ export class ForgotPasswordPage {
     const emailInput = form.querySelector('ui-input[name="email"]') as any;
     const email = emailInput?.value;
 
+    // Clear previous errors
+    this.clearErrors();
+
     if (!email) {
-      appStore.getState().showNotification({
-        type: 'error',
-        message: 'Please enter your email address',
-        duration: 3000
-      });
+      this.showError('Please enter your email address');
+      return;
+    }
+
+    // Validate email format using utility function
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      this.showError(emailValidation.error!);
       return;
     }
 
@@ -108,17 +116,11 @@ export class ForgotPasswordPage {
         duration: 5000
       });
 
-      // Navigate back to login after delay
-      setTimeout(() => {
-        appRouter.navigate(ROUTES.LOGIN);
-      }, 2000);
+      // Navigate back to login immediately
+      appRouter.navigate(ROUTES.LOGIN);
 
     } catch (error) {
-      appStore.getState().showNotification({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to send reset email',
-        duration: 5000
-      });
+      this.showError(error instanceof Error ? error.message : 'Failed to send reset email');
     } finally {
       // Re-enable submit button
       if (submitBtn) {
@@ -140,6 +142,21 @@ export class ForgotPasswordPage {
     appRouter.navigate(ROUTES.REGISTER);
   }
 
+  private showError(message: string): void {
+    const errorDiv = this.container?.querySelector('#errorMessage') as HTMLElement;
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+  }
+
+  private clearErrors(): void {
+    const errorDiv = this.container?.querySelector('#errorMessage') as HTMLElement;
+    if (errorDiv) {
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+    }
+  }
 
   public destroy(): void {
     // Clean up any event listeners or resources
