@@ -4,6 +4,7 @@ import { authStore } from '../../stores/auth.store';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';
 import { authService } from '../../services/auth.service';
+import { validateUsername, validateEmail, validatePassword, validatePasswordConfirmation, validateRequired } from '../../utils';
 
 export class RegisterPage {
   private container: HTMLElement | null = null;
@@ -17,8 +18,8 @@ export class RegisterPage {
       <div class="auth-container">
         <ui-card class="auth-card">
           <div class="auth-header">
-            <h1>Create your account</h1>
-            <p>Join thousands of users already using our platform</p>
+            <h1>Create Account</h1>
+            <p>Join our platform today</p>
           </div>
           
           <form id="registerForm" class="auth-form">
@@ -51,13 +52,6 @@ export class RegisterPage {
               placeholder="Confirm your password"
               required>
             </ui-password-input>
-            
-            <ui-input 
-              name="name"
-              type="text"
-              label="Full Name"
-              placeholder="Enter your full name">
-            </ui-input>
             
             <ui-input 
               name="organization"
@@ -161,7 +155,6 @@ export class RegisterPage {
     const emailInput = form.querySelector('ui-input[name="email"]') as any;
     const passwordInput = form.querySelector('ui-password-input[name="password"]') as any;
     const confirmPasswordInput = form.querySelector('ui-password-input[name="confirmPassword"]') as any;
-    const nameInput = form.querySelector('ui-input[name="name"]') as any;
     const organizationInput = form.querySelector('ui-input[name="organization"]') as any;
     const termsCheckbox = form.querySelector('ui-checkbox[name="acceptTerms"]') as any;
     const subscribeCheckbox = form.querySelector('ui-checkbox[name="subscribe"]') as any;
@@ -173,7 +166,6 @@ export class RegisterPage {
       username: usernameInput?.value || '',
       email: emailInput?.value || '',
       password: password,
-      name: nameInput?.value || '',
       organization: organizationInput?.value || undefined,
       termsConsent: termsCheckbox?.checked || false,
       marketingConsent: subscribeCheckbox?.checked || false
@@ -184,21 +176,28 @@ export class RegisterPage {
     // Clear previous errors
     this.clearErrors();
 
-    // Validate required fields
-    if (!registrationData.username || !registrationData.email || !registrationData.password || !confirmPassword) {
-      this.showError('Please fill in all required fields');
+    // Validate using utility functions
+    const usernameValidation = validateUsername(registrationData.username);
+    if (!usernameValidation.isValid) {
+      this.showError(usernameValidation.error!);
       return;
     }
 
-    // Validate password confirmation
-    if (password !== confirmPassword) {
-      this.showError('Passwords do not match');
+    const emailValidation = validateEmail(registrationData.email);
+    if (!emailValidation.isValid) {
+      this.showError(emailValidation.error!);
       return;
     }
 
-    // Validate password strength
-    if (password.length < 8) {
-      this.showError('Password must be at least 8 characters long');
+    const passwordValidation = validatePassword(registrationData.password);
+    if (!passwordValidation.isValid) {
+      this.showError(passwordValidation.error!);
+      return;
+    }
+
+    const passwordConfirmValidation = validatePasswordConfirmation(password, confirmPassword);
+    if (!passwordConfirmValidation.isValid) {
+      this.showError(passwordConfirmValidation.error!);
       return;
     }
 

@@ -44,16 +44,42 @@ export class HttpService {
         }
         return response;
       },
-      (error) => {
+      async (error) => {
         console.error('[HTTP] Response error:', error);
         
         // Handle specific error scenarios
         if (error.response?.status === 401) {
           const wwwAuth = error.response.headers['www-authenticate'];
           if (wwwAuth === 'Refresh') {
-            // Signal that token refresh is needed
-            console.log('[HTTP] Token refresh required');
-            // The auth service will handle this
+            console.log('[HTTP] Token refresh required - attempting automatic refresh');
+            
+            try {
+              // Attempt to refresh token using auth service
+              const { authService } = await import('./auth.service');
+              await authService.refreshToken();
+              
+              // Retry the original request
+              console.log('[HTTP] Token refreshed, retrying original request');
+              return this.instance.request(error.config);
+            } catch (refreshError) {
+              console.error('[HTTP] Token refresh failed:', refreshError);
+              
+              // Clear auth state and redirect to login
+              const { authStore } = await import('../stores/auth.store');
+              authStore.getState().clearAuth();
+              
+              // Notify user of session expiration
+              const { appStore } = await import('../stores/app.store');
+              appStore.getState().showNotification({
+                type: 'warning',
+                message: 'Your session has expired. Please sign in again.',
+                duration: 5000
+              });
+              
+              // Redirect to login
+              const { appRouter, ROUTES } = await import('../router');
+              appRouter.navigate(ROUTES.LOGIN);
+            }
           }
         }
         

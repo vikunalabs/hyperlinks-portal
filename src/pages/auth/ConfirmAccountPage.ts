@@ -1,4 +1,4 @@
-// Account confirmation page using UI library components
+// Account confirmation page using lit-ui-library components
 
 import { authService } from '../../services/auth.service';
 import { appStore } from '../../stores/app.store';
@@ -7,6 +7,7 @@ import { appRouter, ROUTES } from '../../router';
 export class ConfirmAccountPage {
   private container: HTMLElement | null = null;
   private token: string;
+  private verificationStatus: 'verifying' | 'success' | 'error' = 'verifying';
 
   constructor(token: string) {
     this.token = token;
@@ -14,56 +15,130 @@ export class ConfirmAccountPage {
 
   public render(target: HTMLElement): void {
     this.container = target;
-    
-    target.innerHTML = `
-      <auth-email-verification-page
-        title="Confirm Your Account"
-        subtitle="Please wait while we verify your account"
-        verification-status="verifying"
-        verification-message="Verifying your account with the provided token..."
-        success-message="Your account has been successfully verified!"
-        error-message="Account verification failed. The link may be expired or invalid."
-        resend-message="We can send another verification link to your email address."
-        resend-label="Resend Verification Email"
-        continue-label="Continue to Dashboard"
-        login-label="Go to Sign In"
-        show-resend-option="true"
-        show-continue-button="true"
-        show-login-link="true"
-        logo-src="/logo.png"
-        company-name="Hyperlinks Management Platform"
-        layout="centered"
-        background-variant="gradient"
-        auto-redirect-delay="0"
-      ></auth-email-verification-page>
+    this.renderContent();
+    this.performVerification();
+  }
+
+  private renderContent(): void {
+    if (!this.container) return;
+
+    this.container.innerHTML = `
+      <div class="auth-container">
+        <ui-card class="auth-card">
+          <div class="auth-header">
+            <h1>Account Verification</h1>
+            <p id="statusMessage">Please wait while we verify your account...</p>
+          </div>
+          
+          <div id="verificationContent" class="verification-content">
+            ${this.getContentForStatus()}
+          </div>
+          
+          <div id="actionButtons" class="auth-footer" style="display: none;">
+            <ui-button 
+              type="button" 
+              variant="primary" 
+              size="lg"
+              label="Continue to Sign In"
+              id="continueButton"
+              style="display: none;">Continue to Sign In</ui-button>
+            
+            <div class="auth-links">
+              <a href="#" id="loginLink">Go to Sign In</a>
+              <a href="#" id="resendLink">Resend Verification Email</a>
+            </div>
+          </div>
+        </ui-card>
+      </div>
     `;
 
     this.bindEvents();
-    this.performVerification();
   }
 
   private bindEvents(): void {
     if (!this.container) return;
 
-    const verificationPage = this.container.querySelector('auth-email-verification-page');
+    const continueButton = this.container.querySelector('#continueButton');
+    const loginLink = this.container.querySelector('#loginLink');
+    const resendLink = this.container.querySelector('#resendLink');
     
-    // Handle email verification events
-    verificationPage?.addEventListener('auth-email-verification-resend', this.handleResendVerification.bind(this));
-    verificationPage?.addEventListener('auth-email-verification-continue', this.handleContinue.bind(this));
-    verificationPage?.addEventListener('auth-navigate-login', this.handleGoToLogin.bind(this));
+    continueButton?.addEventListener('click', this.handleContinue.bind(this));
+    loginLink?.addEventListener('click', this.handleGoToLogin.bind(this));
+    resendLink?.addEventListener('click', this.handleResendVerification.bind(this));
+  }
+
+  private getContentForStatus(): string {
+    switch (this.verificationStatus) {
+      case 'verifying':
+        return `
+          <div class="verification-status verifying">
+            <ui-spinner size="lg"></ui-spinner>
+            <p>Verifying your account token...</p>
+          </div>
+        `;
+      case 'success':
+        return `
+          <div class="verification-status success">
+            <div class="success-icon">✅</div>
+            <p>Your account has been successfully verified!</p>
+            <p class="sub-message">You can now access all features of your account.</p>
+          </div>
+        `;
+      case 'error':
+        return `
+          <div class="verification-status error">
+            <div class="error-icon">❌</div>
+            <p>Account verification failed.</p>
+            <p class="sub-message">The link may be expired or invalid. Please try requesting a new verification email.</p>
+          </div>
+        `;
+      default:
+        return '';
+    }
+  }
+
+  private updateStatus(status: 'success' | 'error', message?: string): void {
+    this.verificationStatus = status;
+    
+    const statusMessageEl = this.container?.querySelector('#statusMessage');
+    const verificationContentEl = this.container?.querySelector('#verificationContent');
+    const actionButtonsEl = this.container?.querySelector('#actionButtons');
+    const continueButtonEl = this.container?.querySelector('#continueButton');
+    const resendLinkEl = this.container?.querySelector('#resendLink');
+    
+    if (statusMessageEl) {
+      statusMessageEl.textContent = status === 'success' 
+        ? 'Verification successful!' 
+        : 'Verification failed';
+    }
+    
+    if (verificationContentEl) {
+      verificationContentEl.innerHTML = this.getContentForStatus();
+    }
+    
+    if (actionButtonsEl) {
+      actionButtonsEl.style.display = 'block';
+    }
+    
+    if (continueButtonEl && status === 'success') {
+      continueButtonEl.style.display = 'block';
+    }
+    
+    // Only show resend link on error, hide on success
+    if (resendLinkEl) {
+      resendLinkEl.style.display = status === 'error' ? 'inline' : 'none';
+    }
   }
 
   private async performVerification(): Promise<void> {
-    const verificationPage = this.container?.querySelector('auth-email-verification-page') as any;
-    
     try {
       await authService.confirmAccount(this.token);
       
-      // Success - update component status
-      if (verificationPage?.setSuccess) {
-        verificationPage.setSuccess();
-      }
-
+      // Clear the token from URL for security after successful verification
+      window.history.replaceState({}, document.title, '/confirm-account/verified');
+      
+      this.updateStatus('success');
+      
       appStore.getState().showNotification({
         type: 'success',
         message: 'Account verified successfully!',
@@ -71,40 +146,32 @@ export class ConfirmAccountPage {
       });
 
     } catch (error) {
-      // Error - update component status
-      if (verificationPage?.setError) {
-        verificationPage.setError(error instanceof Error ? error.message : 'Account verification failed');
-      }
-
+      const errorMessage = error instanceof Error ? error.message : 'Account verification failed';
+      
+      this.updateStatus('error');
+      
       appStore.getState().showNotification({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Account verification failed',
+        message: errorMessage,
         duration: 5000
       });
     }
   }
 
-  private async handleResendVerification(): Promise<void> {
-    try {
-      // For resending, we'd need the email - this is a simplified implementation
-      appStore.getState().showNotification({
-        type: 'info',
-        message: 'Please go to the resend verification page to request a new email',
-        duration: 5000
-      });
+  private async handleResendVerification(event: Event): Promise<void> {
+    event.preventDefault();
+    
+    appStore.getState().showNotification({
+      type: 'info',
+      message: 'Redirecting to resend verification page...',
+      duration: 3000
+    });
 
-      appRouter.navigate(ROUTES.RESEND_VERIFICATION);
-    } catch (error) {
-      appStore.getState().showNotification({
-        type: 'error',
-        message: 'Failed to resend verification email',
-        duration: 5000
-      });
-    }
+    appRouter.navigate(ROUTES.RESEND_VERIFICATION);
   }
 
   private handleContinue(): void {
-    appRouter.navigate(ROUTES.HOME);
+    appRouter.navigate(ROUTES.LOGIN);
   }
 
   private handleGoToLogin(): void {

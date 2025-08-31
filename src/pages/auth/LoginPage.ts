@@ -1,9 +1,9 @@
 // Login page using building block UI components
 
-import { authStore } from '../../stores/auth.store';
-import { appStore } from '../../stores/app.store';
+import { authStore, appStore } from '../../stores';
 import { appRouter, ROUTES } from '../../router';
-import { authService } from '../../services/auth.service';
+import { authService } from '../../services';
+import { validateUsernameOrEmail, validateRequired } from '../../utils';
 
 export class LoginPage {
   private container: HTMLElement | null = null;
@@ -128,9 +128,17 @@ export class LoginPage {
     // Clear previous errors
     this.clearErrors();
 
-    // Validate required fields
-    if (!credentials.usernameOrEmail || !credentials.password) {
-      this.showError('Please fill in all required fields');
+    // Validate required fields using utility functions
+    const usernameValidation = validateUsernameOrEmail(credentials.usernameOrEmail);
+    const passwordValidation = validateRequired(credentials.password, 'Password');
+
+    if (!usernameValidation.isValid) {
+      this.showError(usernameValidation.error!);
+      return;
+    }
+
+    if (!passwordValidation.isValid) {
+      this.showError(passwordValidation.error!);
       return;
     }
 

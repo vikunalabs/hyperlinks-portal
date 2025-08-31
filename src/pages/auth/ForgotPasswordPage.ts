@@ -90,6 +90,14 @@ export class ForgotPasswordPage {
       return;
     }
 
+    // Get submit button and show loading state
+    const submitBtn = this.container?.querySelector('#submitButton') as any;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.loading = true;
+      submitBtn.textContent = 'Sending...';
+    }
+
     try {
       await authService.forgotPassword(email);
       
@@ -111,6 +119,13 @@ export class ForgotPasswordPage {
         message: error instanceof Error ? error.message : 'Failed to send reset email',
         duration: 5000
       });
+    } finally {
+      // Re-enable submit button
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.loading = false;
+        submitBtn.textContent = 'Send Reset Link';
+      }
     }
   }
 

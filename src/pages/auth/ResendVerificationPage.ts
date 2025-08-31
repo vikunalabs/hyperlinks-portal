@@ -115,8 +115,10 @@ export class ResendVerificationPage {
     event.preventDefault();
     
     const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-    const email = formData.get('email') as string;
+    
+    // Extract value directly from component (FormData not working with lit-ui-library)
+    const emailInput = form.querySelector('ui-input[name="email"]') as any;
+    const email = emailInput?.value || '';
     
     if (!email) {
       this.showError('Email address is required');
@@ -145,6 +147,7 @@ export class ResendVerificationPage {
     const resendBtn = this.container?.querySelector('#resendButton') as any;
     if (resendBtn) {
       resendBtn.disabled = true;
+      resendBtn.loading = true;
       resendBtn.textContent = 'Sending...';
     }
 
@@ -178,6 +181,7 @@ export class ResendVerificationPage {
       // Re-enable the button
       if (resendBtn) {
         resendBtn.disabled = false;
+        resendBtn.loading = false;
         resendBtn.textContent = this.context === 'registration' ? 'Send Again' : 'Send Verification Email';
       }
     }

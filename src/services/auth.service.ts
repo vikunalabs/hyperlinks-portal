@@ -3,6 +3,7 @@
 import { HttpService } from './http.service';
 import { csrfService } from './csrf.service';
 import { API_BASE_URLS, AUTH_ENDPOINTS } from '../utils/constants';
+import { handleApiError, logError } from '../utils/error-handler';
 import type { 
   LoginCredentials, 
   RegistrationData, 
@@ -215,19 +216,8 @@ export class AuthService {
   }
 
   private handleAuthError(error: any, defaultMessage: string): Error {
-    if (error.response?.data?.error?.message) {
-      return new Error(error.response.data.error.message);
-    }
-    
-    if (error.response?.data?.message) {
-      return new Error(error.response.data.message);
-    }
-    
-    if (error.message) {
-      return new Error(error.message);
-    }
-    
-    return new Error(defaultMessage);
+    logError('AuthService', error);
+    return handleApiError(error, defaultMessage);
   }
 }
 

@@ -3,6 +3,7 @@
 import { authService } from '../../services/auth.service';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';
+import { validatePassword, validatePasswordConfirmation } from '../../utils';
 
 export class ResetPasswordPage {
   private container: HTMLElement | null = null;
@@ -98,21 +99,16 @@ export class ResetPasswordPage {
     // Clear previous errors
     this.clearErrors();
 
-    // Validate required fields
-    if (!newPassword || !confirmPassword) {
-      this.showError('Please fill in all required fields');
+    // Validate using utility functions
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      this.showError(passwordValidation.error!);
       return;
     }
 
-    // Validate password confirmation
-    if (newPassword !== confirmPassword) {
-      this.showError('Passwords do not match');
-      return;
-    }
-
-    // Validate password strength
-    if (newPassword.length < 8) {
-      this.showError('Password must be at least 8 characters long');
+    const passwordConfirmValidation = validatePasswordConfirmation(newPassword, confirmPassword);
+    if (!passwordConfirmValidation.isValid) {
+      this.showError(passwordConfirmValidation.error!);
       return;
     }
 
