@@ -1,3 +1,4 @@
+// src/services/auth.service.ts
 // Authentication service - handles all Auth Server interactions
 
 import { HttpService } from './http.service';

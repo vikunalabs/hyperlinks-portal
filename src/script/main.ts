@@ -1,3 +1,5 @@
+// src/script/main.ts
+
 import '../style/main.css'
 
 import '@vikunalabs/lit-ui-library';

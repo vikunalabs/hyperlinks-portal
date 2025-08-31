@@ -1,3 +1,5 @@
+// src/utils/constants.ts
+
 // API endpoints and configuration constants
 
 // Base URLs for the dual server architecture

@@ -1,3 +1,5 @@
+// src/pages/index.ts
+
 // Auth pages
 export { LoginPage } from './auth/LoginPage';
 export { RegisterPage } from './auth/RegisterPage';

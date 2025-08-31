@@ -1,3 +1,4 @@
+// src/router/auth-guard.ts
 // Authentication guard utilities for route protection
 
 import { authStore } from '../stores/auth.store';

@@ -1,3 +1,5 @@
+// src/stores/app.store.ts
+
 import { createStore } from 'zustand/vanilla';
 import type { AppState, Notification } from '../types/auth.types';
 

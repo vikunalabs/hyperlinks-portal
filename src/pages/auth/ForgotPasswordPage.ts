@@ -1,5 +1,5 @@
+// src/pages/auth/ForgotPasswordPage.ts
 // Forgot password page using enhanced UI library page component
-
 import { authService } from '../../services/auth.service';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';

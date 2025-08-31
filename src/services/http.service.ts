@@ -1,3 +1,4 @@
+// src/services/http.service.ts
 // Base HTTP service with Axios configuration and interceptors
 
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';

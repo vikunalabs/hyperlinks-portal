@@ -1,3 +1,5 @@
+// src/stores/index.ts
+
 export { authStore } from './auth.store';
 export { appStore } from './app.store';
 

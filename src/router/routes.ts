@@ -1,3 +1,4 @@
+// src/router/route.ts
 // Route definitions and configuration
 
 export interface RouteConfig {

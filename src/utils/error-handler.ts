@@ -1,3 +1,4 @@
+// src/utils/error-handlers.ts
 // Centralized error handling utilities
 
 import type { ApiResponse, ApiError } from '../types/auth.types';

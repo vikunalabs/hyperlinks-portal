@@ -1,5 +1,5 @@
+// src/pages/auth/RegisterPage.ts
 // Register page using enhanced UI library page component
-
 import { authStore } from '../../stores/auth.store';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';

@@ -1,3 +1,5 @@
+// src/stores/auth.store.ts
+
 import { createStore } from 'zustand/vanilla';
 import type { AuthState, LoginCredentials, RegistrationData, User } from '../types/auth.types';
 import { authService } from '../services/auth.service';

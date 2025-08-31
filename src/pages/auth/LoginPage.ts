@@ -1,5 +1,5 @@
+// src/pages/auth/LoginPage.ts
 // Login page using building block UI components
-
 import { authStore, appStore } from '../../stores';
 import { appRouter, ROUTES } from '../../router';
 import { authService } from '../../services';

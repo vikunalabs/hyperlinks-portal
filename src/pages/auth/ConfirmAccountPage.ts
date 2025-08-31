@@ -1,5 +1,5 @@
+// src/pages/auth/ConfirmAccountPage.ts
 // Account confirmation page using lit-ui-library components
-
 import { authService } from '../../services/auth.service';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';

@@ -1,5 +1,5 @@
+// src/pages/auth/ResetPasswordPage.ts
 // Reset password page using building block UI components
-
 import { authService } from '../../services/auth.service';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';

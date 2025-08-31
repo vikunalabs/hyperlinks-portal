@@ -1,3 +1,5 @@
+// src/types/auth.types.ts
+
 // Authentication type definitions following the plan
 
 // User type based on backend JWT claims

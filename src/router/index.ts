@@ -1,3 +1,4 @@
+// src/router/index.ts
 // Main router implementation with Navigo
 
 import Navigo from 'navigo';

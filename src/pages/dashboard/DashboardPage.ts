@@ -1,5 +1,5 @@
+// src/pages/dashboard/DashboardPage.ts
 // Dashboard page for authenticated users
-
 import { authStore } from '../../stores/auth.store';
 import { appStore } from '../../stores/app.store';
 import { appRouter, ROUTES } from '../../router';

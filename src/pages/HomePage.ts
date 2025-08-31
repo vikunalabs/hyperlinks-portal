@@ -1,3 +1,4 @@
+// src/pages/HomePage.ts
 // Public home page for unauthenticated users
 
 import { appRouter, ROUTES } from '../router';
