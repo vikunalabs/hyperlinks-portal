@@ -1,6 +1,8 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { isValidEmail, isValidUsername, doPasswordsMatch, ValidationMessages } from '../../utils';
+import { EyeIcon, EyeOffIcon } from '../../shared/icons';
+import { allModalStyles } from '../../shared/styles/modal-styles';
 
 @customElement('register-modal')
 export class RegisterModal extends LitElement {
@@ -20,310 +22,80 @@ export class RegisterModal extends LitElement {
   
   private previousActiveElement: Element | null = null;
 
-  static styles = css`
-    .modal-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: var(--bg-overlay);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: var(--z-modal-backdrop);
-      opacity: 0;
-      visibility: hidden;
-      transition: all var(--transition-slow);
-    }
-
-    .modal-backdrop.open {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .modal {
-      background: var(--bg-primary);
-      border-radius: var(--radius-lg);
-      padding: var(--space-xl);
-      width: 100%;
-      max-width: 450px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: var(--shadow-xl);
-      transform: scale(0.9);
-      transition: transform var(--transition-slow);
-      z-index: var(--z-modal);
-    }
-
-    .modal-backdrop.open .modal {
-      transform: scale(1);
-    }
-
-    .form-group {
-      margin-bottom: var(--space-md);
-    }
-
-    .form-label {
-      display: block;
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-medium);
-      color: var(--text-primary);
-      margin-bottom: var(--space-sm);
-    }
-
-    .form-label .required {
-      color: var(--color-danger);
-      margin-left: var(--space-xs);
-    }
-
-    .form-input {
-      width: 100%;
-      padding: var(--space-sm) var(--space-md);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      font-size: var(--font-size-md);
-      transition: border-color var(--transition-base), box-shadow var(--transition-base);
-      box-sizing: border-box;
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-    }
-
-    .form-input:focus {
-      outline: none;
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px var(--color-primary-light);
-    }
-
-    .form-input.error {
-      border-color: var(--color-danger);
-    }
-
-    .form-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .btn {
-      padding: var(--space-sm) var(--space-lg);
-      font-size: var(--font-size-md);
-      font-weight: var(--font-weight-medium);
-      border: 2px solid transparent;
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: all var(--transition-base);
-      text-decoration: none;
-      display: inline-block;
-      min-width: 120px;
-      text-align: center;
-      line-height: var(--line-height-base);
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background-color: var(--color-primary);
-      color: var(--text-inverse);
-      border-color: var(--color-primary);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background-color: var(--color-primary-hover);
-      border-color: var(--color-primary-hover);
-      transform: translateY(-1px);
-    }
-
-    .modal-header {
-      text-align: center;
-      margin-bottom: var(--space-lg);
-    }
-
-    .modal-title {
-      font-size: var(--font-size-2xl);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-      margin: 0 0 var(--space-sm) 0;
-    }
-
-    .modal-subtitle {
-      color: var(--text-secondary);
-      font-size: var(--font-size-sm);
-    }
-
-    .error-message {
-      color: var(--color-danger);
-      font-size: var(--font-size-xs);
-      margin-top: var(--space-xs);
-    }
-
-    .form-error {
-      color: var(--color-danger);
-      font-size: var(--font-size-xs);
-      margin-top: var(--space-xs);
-      display: block;
-    }
-
-    .password-input-container {
-      position: relative;
-    }
-
-    .password-toggle {
-      position: absolute;
-      right: var(--space-sm);
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--text-secondary);
-      padding: var(--space-xs);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .password-toggle:hover {
-      color: var(--color-primary);
-    }
-
-    .password-toggle svg {
-      width: var(--font-size-xl);
-      height: var(--font-size-xl);
-    }
-
-    .checkbox-container {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--space-sm);
-      margin-bottom: var(--space-md);
-    }
-
-    .checkbox {
-      width: var(--space-md);
-      height: var(--space-md);
-      margin-top: calc(var(--space-xs) / 2);
-      flex-shrink: 0;
-    }
-
-    .checkbox-label {
-      font-size: var(--font-size-sm);
-      color: var(--text-primary);
-      cursor: pointer;
-      line-height: var(--line-height-base);
-    }
-
-    .checkbox-label a {
-      color: var(--color-primary);
-      text-decoration: none;
-    }
-
-    .checkbox-label a:hover {
-      text-decoration: underline;
-    }
-
-    /* Button style overrides */
-    .btn {
-      width: 100%;
-      margin-bottom: 0;
-    }
-
-    .btn-primary {
-      margin-bottom: var(--space-md);
-    }
-
-    .btn-google {
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-sm);
-      margin-top: var(--space-md);
-      padding: var(--space-sm) var(--space-lg);
-      font-size: var(--font-size-md);
-      font-weight: var(--font-weight-medium);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: all var(--transition-base);
-    }
-
-    .btn-google:hover {
-      background-color: var(--bg-secondary);
-    }
-
-    .google-icon {
-      width: var(--font-size-xl);
-      height: var(--font-size-xl);
-    }
-
-    .divider {
-      display: flex;
-      align-items: center;
-      margin: var(--space-md) 0;
-      color: var(--text-secondary);
-      font-size: var(--font-size-sm);
-    }
-
-    .divider::before,
-    .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background-color: var(--border-color-light);
-    }
-
-    .divider span {
-      padding: 0 var(--space-md);
-    }
-
-    .links {
-      text-align: center;
-      margin-top: var(--space-md);
-    }
-
-    .link {
-      color: var(--color-primary);
-      text-decoration: none;
-      font-size: var(--font-size-sm);
-    }
-
-    .link:hover {
-      text-decoration: underline;
-    }
-
-    .close-btn {
-      position: absolute;
-      top: var(--space-md);
-      right: var(--space-md);
-      background: none;
-      border: none;
-      font-size: var(--font-size-2xl);
-      cursor: pointer;
-      color: var(--text-secondary);
-      width: var(--space-xl);
-      height: var(--space-xl);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: var(--radius-sm);
-    }
-
-    .close-btn:hover {
-      background-color: var(--bg-secondary);
-      color: var(--text-primary);
-    }
-
-    @media (max-width: 480px) {
+  static styles = [
+    ...allModalStyles,
+    css`
+      /* RegisterModal specific styles only */
       .modal {
-        margin: var(--space-md);
-        padding: var(--space-lg);
-        max-height: 95vh;
+        max-width: 450px; /* Medium modal size for registration */
       }
-    }
-  `;
+
+      .form-label .required {
+        color: var(--color-danger);
+        margin-left: var(--space-xs);
+      }
+
+      .checkbox-container {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-sm);
+        margin-bottom: var(--space-md);
+      }
+
+      .checkbox {
+        width: var(--space-md);
+        height: var(--space-md);
+        margin-top: calc(var(--space-xs) / 2);
+        flex-shrink: 0;
+      }
+
+      .checkbox-label {
+        font-size: var(--font-size-sm);
+        color: var(--text-primary);
+        cursor: pointer;
+        line-height: var(--line-height-base);
+      }
+
+      .checkbox-label a {
+        color: var(--color-primary);
+        text-decoration: none;
+      }
+
+      .checkbox-label a:hover {
+        text-decoration: underline;
+      }
+
+      .btn-primary {
+        width: 100%;
+        margin-bottom: var(--space-md);
+      }
+
+      .google-icon {
+        width: var(--font-size-xl);
+        height: var(--font-size-xl);
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        margin: var(--space-md) 0;
+        color: var(--text-secondary);
+        font-size: var(--font-size-sm);
+      }
+
+      .divider::before,
+      .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background-color: var(--border-color);
+      }
+
+      .divider span {
+        padding: 0 var(--space-md);
+      }
+    `
+  ];
 
   render() {
     const passwordsMatch = !this.confirmPassword || doPasswordsMatch(this.password, this.confirmPassword);
@@ -498,20 +270,11 @@ export class RegisterModal extends LitElement {
   }
 
   private get eyeIcon() {
-    return html`
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-      </svg>
-    `;
+    return EyeIcon;
   }
 
   private get eyeOffIcon() {
-    return html`
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 11-4.243-4.243m4.242 4.242L9.88 9.88"/>
-      </svg>
-    `;
+    return EyeOffIcon;
   }
 
   private get googleIcon() {
@@ -643,8 +406,15 @@ export class RegisterModal extends LitElement {
   }
 
   private handleGoogleSignup() {
+    // Clear any existing form errors when using Google sign-up
+    this.usernameTouched = false;
+    this.emailTouched = false;
+    this.passwordTouched = false;
+    this.confirmPasswordTouched = false;
+    
     console.log('Google signup clicked');
     // TODO: Implement Google signup logic
+    this.dispatchEvent(new CustomEvent('google-signup', { bubbles: true, composed: true }));
   }
 
   private handleLoginClick(e: Event) {

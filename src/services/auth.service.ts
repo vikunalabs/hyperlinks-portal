@@ -112,10 +112,10 @@ export class AuthService {
    */
   public async getCurrentUser(): Promise<User> {
     try {
-      const response = await this.httpService.get<{ user: User }>(AUTH_ENDPOINTS.USER);
+      const response = await this.httpService.get<User>(AUTH_ENDPOINTS.USER);
       
-      if (response.data.data?.user) {
-        return response.data.data.user;
+      if (response.data.data) {
+        return response.data.data;
       }
       
       throw new Error('Invalid user response');

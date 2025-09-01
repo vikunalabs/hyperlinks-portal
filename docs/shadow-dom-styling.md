@@ -155,26 +155,88 @@ static styles = css`
 `;
 ```
 
-### 3. Shared Patterns
+### 3. Shared Patterns (Recommended Approach)
 
-For repeated styling patterns, create template literals:
+For repeated styling patterns, create shared style modules:
 
 ```typescript
-// /src/utils/styles.ts
-export const modalStyles = css`
+// /src/shared/styles/modal-styles.ts
+export const modalBackdropStyles = css`
   .modal-backdrop {
     position: fixed;
-    /* ... shared modal styles */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-overlay);
+    /* ... complete modal backdrop styles */
   }
 `;
 
-// Component usage
-import { modalStyles } from '../utils/styles';
+export const modalContainerStyles = css`
+  .modal {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    /* ... complete modal container styles */
+  }
+`;
 
-static styles = [modalStyles, css`
-  /* Component-specific overrides */
-  .modal { max-width: 400px; }
-`];
+// Combined styles for easy importing
+export const allModalStyles = [
+  modalBackdropStyles,
+  modalContainerStyles,
+  modalHeaderStyles,
+  modalButtonStyles,
+  modalFormStyles,
+  modalFooterStyles
+];
+```
+
+**Component usage - The Correct Way:**
+
+```typescript
+// /src/components/forms/LoginModal.ts
+import { allModalStyles } from '../../shared/styles/modal-styles';
+
+static styles = [
+  ...allModalStyles, // ✅ Spread shared styles
+  css`
+    /* Component-specific styles ONLY */
+    .modal {
+      max-width: 400px; /* Override for login modal */
+    }
+
+    .checkbox-row {
+      display: flex;
+      justify-content: space-between;
+      /* ... login-specific layout */
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      /* ... login-specific divider */
+    }
+  `
+];
+```
+
+**❌ What NOT to do:**
+
+```typescript
+// This defeats the purpose of shared styles
+static styles = [
+  ...allModalStyles,
+  css`
+    /* Don't duplicate what's already in shared styles */
+    .modal-backdrop { /* ❌ Already defined in shared styles */ }
+    .form-input { /* ❌ Already defined in shared styles */ }
+    .btn { /* ❌ Already defined in shared styles */ }
+    
+    /* Only include component-specific styles here */
+  `
+];
 ```
 
 ## Debugging Shadow DOM Styling
@@ -214,7 +276,48 @@ static styles = [modalStyles, css`
 2. **CSS custom properties are your friend** - they cross shadow boundaries
 3. **Complete component styling is necessary** - external CSS won't help
 4. **Design systems work well with Shadow DOM** - through CSS variables
-5. **Document architectural decisions** - to avoid repeating mistakes
+5. **Shared styles approach works** - use `...allModalStyles` with component-specific overrides only
+6. **Preserve original design elements** - Don't lose placeholders, separators, or visual elements during refactoring
+7. **Document architectural decisions** - to avoid repeating mistakes
+
+## Critical Design Preservation Checklist
+
+When refactoring components with shared styles, ensure you maintain:
+
+✅ **Input placeholders** - Essential for user guidance  
+✅ **Visual separators** - Dividers between sections (e.g., "or" between buttons)  
+✅ **Button styling** - Full-width, centering, proper spacing  
+✅ **Form validation** - Error states and accessibility attributes  
+✅ **Interactive elements** - Password toggles, checkboxes, etc.  
+✅ **Responsive design** - Mobile breakpoints and responsive behavior  
+
+### Example: LoginModal Refactoring Done Right
+
+**Before refactoring - check for design elements:**
+- Input placeholders: "Enter your email or username", "Enter your password"
+- Visual separator: Divider line with "or" text between Sign In and Google button  
+- Button centering: Google button should be full-width
+- Password toggle: Eye icon visibility and functionality
+
+**After refactoring - verify all elements preserved:**
+```typescript
+// ✅ Placeholders restored
+placeholder="Enter your email or username"
+placeholder="Enter your password" 
+
+// ✅ Separator added back
+<div class="divider"><span>or</span></div>
+
+// ✅ Button width fixed in shared styles
+.btn-google { width: 100%; }
+
+// ✅ Component-specific styles for divider
+.divider { 
+  display: flex; 
+  align-items: center; 
+  /* ... proper styling */
+}
+```
 
 ## Related Files
 

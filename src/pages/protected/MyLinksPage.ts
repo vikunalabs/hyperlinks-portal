@@ -1,243 +1,43 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 
+interface LinkFormData {
+  title: string;
+  longLink: string;
+  domain: string;
+  code: string;
+  expiryDate: string;
+  password: string;
+}
+
+interface LinkData {
+  id: string;
+  title: string;
+  shortLink: string;
+  longLink: string;
+  domain: string;
+  code: string;
+  expiryDate?: string;
+  hasPassword: boolean;
+  createdAt: string;
+  clicks: number;
+  status: 'active' | 'expired' | 'disabled';
+}
+
 @customElement('my-links-page')
 export class MyLinksPage extends LitElement {
-  @state() private isSettingsOpen = false;
+  @state() private showModal = false;
+  @state() private modalMode: 'add' | 'edit' | 'view' = 'add';
+  @state() private selectedLink?: LinkFormData;
+  @state() private selectedLinkId?: string;
+  @state() private links: LinkData[] = [];
+  @state() private searchQuery = '';
+  @state() private sortBy = 'created';
+  @state() private filterBy = 'all';
+  @state() private currentPage = 1;
+  @state() private itemsPerPage = 10;
 
   static styles = css`
-    :host {
-      display: flex;
-      min-height: 100vh;
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-    }
-
-    .sidebar {
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 280px;
-      height: 100vh;
-      background-color: var(--bg-secondary);
-      border-right: 1px solid var(--border-color);
-      display: flex;
-      flex-direction: column;
-      z-index: 1000;
-    }
-
-    .sidebar-header {
-      padding: var(--space-xl);
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: var(--space-md);
-    }
-
-    .logo-icon {
-      width: 32px;
-      height: 32px;
-      background-color: var(--color-primary);
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-inverse);
-    }
-
-    .logo-text {
-      font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-bold);
-      color: var(--text-primary);
-      margin: 0;
-    }
-
-    .sidebar-nav {
-      flex: 1;
-      padding: var(--space-md) 0;
-      overflow-y: auto;
-    }
-
-    .nav-section {
-      margin-bottom: var(--space-lg);
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: var(--space-md);
-      padding: var(--space-md) var(--space-xl);
-      color: var(--text-secondary);
-      text-decoration: none;
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left;
-      cursor: pointer;
-      transition: all var(--transition-base);
-      font-size: var(--font-size-md);
-      font-weight: var(--font-weight-medium);
-    }
-
-    .nav-item:hover {
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-    }
-
-    .nav-item.active {
-      background-color: var(--color-primary);
-      color: var(--text-inverse);
-    }
-
-    .nav-item.active:hover {
-      background-color: var(--color-primary-hover);
-    }
-
-    .nav-icon {
-      width: 20px;
-      height: 20px;
-      flex-shrink: 0;
-    }
-
-    .settings-dropdown {
-      position: relative;
-    }
-
-    .dropdown-content {
-      overflow: hidden;
-      max-height: 0;
-      transition: max-height 0.3s ease-out;
-    }
-
-    .dropdown-content.open {
-      max-height: 200px;
-      transition: max-height 0.3s ease-in;
-    }
-
-    .dropdown-item {
-      padding: var(--space-sm) var(--space-xl);
-      padding-left: 60px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      display: block;
-      cursor: pointer;
-      transition: all var(--transition-base);
-      font-size: var(--font-size-sm);
-      border-left: 3px solid transparent;
-    }
-
-    .dropdown-item:hover {
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-      border-left-color: var(--color-primary);
-    }
-
-    .dropdown-item.active {
-      background-color: var(--color-primary);
-      color: var(--text-inverse);
-      border-left-color: var(--color-primary-hover);
-    }
-
-    .chevron-icon {
-      width: 16px;
-      height: 16px;
-      margin-left: auto;
-      transition: transform var(--transition-base);
-    }
-
-    .settings-dropdown.open .chevron-icon {
-      transform: rotate(180deg);
-    }
-
-    .sidebar-footer {
-      padding: var(--space-xl);
-      border-top: 1px solid var(--border-color);
-    }
-
-    .sign-out-btn {
-      display: flex;
-      align-items: center;
-      gap: var(--space-md);
-      padding: var(--space-md);
-      width: 100%;
-      background: none;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all var(--transition-base);
-      font-size: var(--font-size-md);
-      font-weight: var(--font-weight-medium);
-    }
-
-    .sign-out-btn:hover {
-      background-color: var(--color-danger);
-      border-color: var(--color-danger);
-      color: var(--text-inverse);
-    }
-
-    .main-container {
-      flex: 1;
-      margin-left: 280px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .top-navbar {
-      background-color: var(--bg-primary);
-      border-bottom: 1px solid var(--border-color);
-      padding: var(--space-md) var(--space-xl);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .page-title {
-      font-size: var(--font-size-2xl);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-      margin: 0;
-    }
-
-    .user-actions {
-      display: flex;
-      align-items: center;
-      gap: var(--space-md);
-    }
-
-    .main-content {
-      flex: 1;
-      padding: var(--space-xl);
-      overflow-y: auto;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: var(--space-md);
-    }
-
-    .user-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background-color: var(--color-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-inverse);
-      font-weight: var(--font-weight-semibold);
-    }
-
-    .user-name {
-      color: var(--text-primary);
-      font-weight: var(--font-weight-medium);
-    }
-
     .page-header {
       margin-bottom: var(--space-2xl);
     }
@@ -324,180 +124,764 @@ export class MyLinksPage extends LitElement {
       margin: 0 0 var(--space-lg) 0;
     }
 
-    @media (max-width: 768px) {
-      .sidebar {
-        width: 250px;
-      }
-      
-      .main-container {
-        margin-left: 250px;
-      }
-      
-      .main-content {
-        padding: var(--space-md);
-      }
+    .links-table-container {
+      background-color: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
     }
 
-    @media (max-width: 480px) {
-      .sidebar {
-        width: 100%;
-        position: fixed;
-        transform: translateX(-100%);
-        transition: transform var(--transition-base);
+    .links-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .links-table th {
+      background-color: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      padding: var(--space-md);
+      text-align: left;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .links-table td {
+      padding: var(--space-md);
+      border-bottom: 1px solid var(--border-color-light);
+      vertical-align: middle;
+    }
+
+    .links-table tbody tr:hover {
+      background-color: var(--bg-primary);
+    }
+
+    .links-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .short-link {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: var(--font-weight-medium);
+      word-break: break-all;
+    }
+
+    .short-link:hover {
+      text-decoration: underline;
+    }
+
+    .long-link {
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .link-title {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      margin-bottom: var(--space-xs);
+    }
+
+    .password-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .password-indicator.protected {
+      background-color: var(--color-warning-light);
+      color: var(--color-warning-dark);
+    }
+
+    .password-indicator.public {
+      background-color: var(--color-success-light);
+      color: var(--color-success-dark);
+    }
+
+    .expiry-date {
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+
+    .expiry-date.expired {
+      color: var(--color-danger);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .expiry-date.expiring-soon {
+      color: var(--color-warning);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .action-btn {
+      padding: var(--space-sm);
+      border: none;
+      background: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-base);
+      width: 40px;
+      height: 40px;
+    }
+
+    .action-btn:hover {
+      background-color: var(--bg-primary);
+    }
+
+    .action-btn.view {
+      color: var(--color-primary);
+    }
+
+    .action-btn.edit {
+      color: var(--color-warning);
+    }
+
+    .action-btn.delete {
+      color: var(--color-danger);
+    }
+
+    .action-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .stats-summary {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+    }
+
+    .search-controls {
+      display: flex;
+      gap: var(--space-md);
+      align-items: center;
+      margin-bottom: var(--space-xl);
+      padding: var(--space-lg);
+      background-color: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+    }
+
+    .search-input {
+      flex: 1;
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: var(--font-size-md);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+
+    .dropdown {
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: var(--font-size-md);
+      cursor: pointer;
+      min-width: 150px;
+    }
+
+    .dropdown:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+
+    .pagination-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-lg);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    }
+
+    .pagination-info {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+    }
+
+    .pagination-controls {
+      display: flex;
+      gap: var(--space-sm);
+      align-items: center;
+    }
+
+    .pagination-btn {
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: var(--font-size-sm);
+      transition: all var(--transition-base);
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+      background-color: var(--color-primary);
+      color: var(--text-inverse);
+      border-color: var(--color-primary);
+    }
+
+    .pagination-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pagination-btn.active {
+      background-color: var(--color-primary);
+      color: var(--text-inverse);
+      border-color: var(--color-primary);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-medium);
+      text-transform: capitalize;
+    }
+
+    .status-badge.active {
+      background-color: var(--color-success-light);
+      color: var(--color-success-dark);
+    }
+
+    .status-badge.expired {
+      background-color: var(--color-danger-light);
+      color: var(--color-danger-dark);
+    }
+
+    .status-badge.disabled {
+      background-color: var(--color-warning-light);
+      color: var(--color-warning-dark);
+    }
+
+    .clicks-count {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .created-date {
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+
+    @media (max-width: 768px) {
+      .search-controls {
+        flex-direction: column;
+        align-items: stretch;
       }
-      
-      .main-container {
-        margin-left: 0;
+
+      .pagination-container {
+        flex-direction: column;
+        gap: var(--space-md);
+        text-align: center;
+      }
+
+      .pagination-controls {
+        justify-content: center;
+      }
+
+      .links-table-container {
+        overflow-x: auto;
+      }
+
+      .links-table {
+        min-width: 1000px;
+      }
+
+      .long-link {
+        max-width: 150px;
       }
     }
   `;
 
   render() {
     return html`
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <!-- Logo -->
-        <div class="sidebar-header">
-          <div class="logo">
-            <div class="logo-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10 13a5 5 0 0 0 7.54.54L13 8.79l-3 4.21z M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/>
-              </svg>
-            </div>
-            <h1 class="logo-text">Linkly</h1>
-          </div>
+      <protected-page-layout activeRoute="/links">
+        <div class="page-header">
+          <h1 class="page-title-main">My Links</h1>
+          <p class="page-subtitle">Manage and organize your hyperlinks</p>
         </div>
 
-        <!-- Navigation -->
-        <nav class="sidebar-nav">
-          <div class="nav-section">
-            <button class="nav-item" @click=${() => this.navigateTo('/dashboard')}>
-              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-              </svg>
-              Dashboard
-            </button>
-
-            <button class="nav-item active" @click=${() => this.navigateTo('/links')}>
-              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-              </svg>
-              My Links
-            </button>
-
-            <button class="nav-item" @click=${() => this.navigateTo('/qr-codes')}>
-              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
-              </svg>
-              QR Codes
-            </button>
-
-            <button class="nav-item" @click=${() => this.navigateTo('/analytics')}>
-              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-              </svg>
-              Analytics
-            </button>
-
-            <!-- Settings Dropdown -->
-            <div class="settings-dropdown ${this.isSettingsOpen ? 'open' : ''}">
-              <button class="nav-item" @click=${this.toggleSettings}>
-                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-                Settings
-                <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-              <div class="dropdown-content ${this.isSettingsOpen ? 'open' : ''}">
-                <div class="dropdown-item" @click=${() => this.navigateTo('/profile')}>Profile</div>
-                <div class="dropdown-item" @click=${() => this.navigateTo('/settings/account')}>Account</div>
-                <div class="dropdown-item" @click=${() => this.navigateTo('/settings/security')}>Security</div>
-                <div class="dropdown-item" @click=${() => this.navigateTo('/settings/billing')}>Billing</div>
-              </div>
-            </div>
-
-            <button class="nav-item" @click=${() => this.navigateTo('/support')}>
-              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.25A9.75 9.75 0 002.25 12a9.75 9.75 0 009.75 9.75A9.75 9.75 0 0021.75 12A9.75 9.75 0 0012 2.25z"></path>
-              </svg>
-              Support
-            </button>
+        <div class="action-bar">
+          <div class="stats-summary">
+            <span>${this.getFilteredLinks().length} of ${this.links.length} links</span>
+            ${this.links.length > 0 ? html`
+              <span> • ${this.getTotalClicks()} clicks total</span>
+            ` : ''}
           </div>
-        </nav>
-
-        <!-- Sign Out -->
-        <div class="sidebar-footer">
-          <button class="sign-out-btn" @click=${this.handleLogout}>
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          <button class="btn btn-primary" @click=${this.openAddModal}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 8px;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
-            Sign out
+            Add New Link
           </button>
         </div>
-      </div>
 
-      <!-- Main Container -->
-      <div class="main-container">
-        <!-- Top Navigation -->
-        <div class="top-navbar">
-          <h1 class="page-title">My Links</h1>
-          <div class="user-actions">
-            <div class="user-info">
-              <div class="user-avatar">U</div>
-              <span class="user-name">User</span>
-            </div>
-          </div>
+        <!-- Search Controls -->
+        <div class="search-controls">
+          <input 
+            class="search-input" 
+            type="text" 
+            placeholder="Search links by title, domain, or destination..."
+            .value=${this.searchQuery}
+            @input=${this.handleSearchInput}
+          />
+          <select class="dropdown" .value=${this.sortBy} @change=${this.handleSortChange}>
+            <option value="created">Sort by Created</option>
+            <option value="title">Sort by Title</option>
+            <option value="clicks">Sort by Clicks</option>
+            <option value="expiry">Sort by Expiry</option>
+          </select>
+          <select class="dropdown" .value=${this.filterBy} @change=${this.handleFilterChange}>
+            <option value="all">All Links</option>
+            <option value="active">Active</option>
+            <option value="expired">Expired</option>
+            <option value="disabled">Disabled</option>
+            <option value="protected">Protected</option>
+            <option value="public">Public</option>
+          </select>
         </div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-          <div class="page-header">
-            <h1 class="page-title-main">My Links</h1>
-            <p class="page-subtitle">Manage and organize your hyperlinks</p>
-          </div>
-
-          <div class="action-bar">
-            <div>
-              <span>0 links total</span>
-            </div>
-            <button class="btn btn-primary">
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 8px;">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-              Add New Link
-            </button>
-          </div>
-
+        ${this.links.length === 0 ? html`
           <div class="empty-state">
             <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
             </svg>
             <h3 class="empty-title">No links yet</h3>
             <p class="empty-description">Start building your link collection by adding your first hyperlink.</p>
-            <button class="btn btn-primary">Add Your First Link</button>
+            <button class="btn btn-primary" @click=${this.openAddModal}>Add Your First Link</button>
           </div>
-        </div>
-      </div>
+        ` : html`
+          <div class="links-table-container">
+            <table class="links-table">
+              <thead>
+                <tr>
+                  <th>Link</th>
+                  <th>Destination</th>
+                  <th>Clicks</th>
+                  <th>Created</th>
+                  <th>Expiry Date</th>
+                  <th>Status</th>
+                  <th>Protection</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${this.getPaginatedLinks().map(link => html`
+                  <tr>
+                    <td>
+                      <div class="link-title">${link.title || 'Untitled'}</div>
+                      <a href="https://${link.shortLink}" target="_blank" class="short-link">
+                        https://${link.shortLink}
+                      </a>
+                    </td>
+                    <td>
+                      <div class="long-link" title="${link.longLink}">
+                        ${link.longLink}
+                      </div>
+                    </td>
+                    <td>
+                      <div class="clicks-count">${link.clicks.toLocaleString()}</div>
+                    </td>
+                    <td>
+                      <div class="created-date">${this.formatDate(link.createdAt)}</div>
+                    </td>
+                    <td>
+                      ${link.expiryDate ? html`
+                        <div class="expiry-date ${this.getExpiryStatus(link.expiryDate)}">
+                          ${this.formatDate(link.expiryDate)}
+                        </div>
+                      ` : html`
+                        <span class="expiry-date">Never</span>
+                      `}
+                    </td>
+                    <td>
+                      <span class="status-badge ${link.status}">
+                        ${link.status}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="password-indicator ${link.hasPassword ? 'protected' : 'public'}">
+                        ${link.hasPassword ? html`
+                          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                          </svg>
+                          Protected
+                        ` : html`
+                          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                          </svg>
+                          Public
+                        `}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="actions">
+                        <button class="action-btn view" @click=${() => this.viewLink(link)} title="View analytics">
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                          </svg>
+                        </button>
+                        <button class="action-btn edit" @click=${() => this.editLink(link)} title="Edit link">
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                          </svg>
+                        </button>
+                        <button class="action-btn delete" @click=${() => this.deleteLink(link)} title="Delete link">
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `)}
+              </tbody>
+            </table>
+            ${this.getFilteredLinks().length > this.itemsPerPage ? html`
+              <div class="pagination-container">
+                <div class="pagination-info">
+                  Showing ${this.getPaginationStartIndex()} to ${this.getPaginationEndIndex()} of ${this.getFilteredLinks().length} links
+                </div>
+                <div class="pagination-controls">
+                  <button 
+                    class="pagination-btn"
+                    ?disabled=${this.currentPage === 1}
+                    @click=${this.goToPreviousPage}
+                  >
+                    Previous
+                  </button>
+                  ${this.getPaginationButtons().map(page => html`
+                    <button 
+                      class="pagination-btn ${page === this.currentPage ? 'active' : ''}"
+                      @click=${() => this.goToPage(page)}
+                    >
+                      ${page}
+                    </button>
+                  `)}
+                  <button 
+                    class="pagination-btn"
+                    ?disabled=${this.currentPage === this.getTotalPages()}
+                    @click=${this.goToNextPage}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `}
+      </protected-page-layout>
+      
+      <!-- Link Modal -->
+      <add-link-modal 
+        ?open=${this.showModal} 
+        mode=${this.modalMode}
+        .linkData=${this.selectedLink}
+        @close=${this.closeModal}
+        @submit=${this.handleLinkSubmit}
+        @update=${this.handleLinkUpdate}
+        @edit-mode=${this.handleSwitchToEditMode}>
+      </add-link-modal>
     `;
   }
 
-  private navigateTo(path: string) {
-    console.log(`[MyLinks] Navigating to ${path}`);
-    // Import appRouter dynamically to avoid circular imports
-    import('../../router').then(({ appRouter }) => {
-      appRouter.navigate(path);
+  private openAddModal() {
+    this.modalMode = 'add';
+    this.selectedLink = undefined;
+    this.selectedLinkId = undefined;
+    this.showModal = true;
+  }
+
+  private closeModal() {
+    this.showModal = false;
+    this.selectedLink = undefined;
+    this.selectedLinkId = undefined;
+  }
+
+  private handleLinkSubmit(event: CustomEvent) {
+    const formData = event.detail;
+    console.log('[MyLinks] New link submitted:', formData);
+    
+    const alias = formData.code || this.generateCode();
+    
+    // Create new link object with proper short link format
+    const newLink: LinkData = {
+      id: this.generateId(),
+      title: formData.title || '',
+      shortLink: `${formData.domain}/${alias}`,
+      longLink: formData.longLink,
+      domain: formData.domain,
+      code: alias,
+      expiryDate: formData.expiryDate || undefined,
+      hasPassword: !!formData.password,
+      createdAt: new Date().toISOString(),
+      clicks: 0,
+      status: 'active'
+    };
+    
+    // Add to links array
+    this.links = [...this.links, newLink];
+    this.closeModal();
+  }
+
+  private handleLinkUpdate(event: CustomEvent) {
+    const formData = event.detail;
+    console.log('[MyLinks] Link updated:', formData);
+    
+    if (this.selectedLinkId) {
+      // Update in links array
+      this.links = this.links.map(link => 
+        link.id === this.selectedLinkId ? {
+          ...link,
+          title: formData.title || '',
+          longLink: formData.longLink,
+          expiryDate: formData.expiryDate || undefined,
+          hasPassword: !!formData.password,
+        } : link
+      );
+    }
+    
+    this.closeModal();
+  }
+
+  private handleSwitchToEditMode() {
+    this.modalMode = 'edit';
+  }
+
+  private generateId(): string {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
+
+  private generateCode(): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  private getTotalClicks(): number {
+    return this.links.reduce((total, link) => total + link.clicks, 0);
+  }
+
+  private formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   }
 
-  private toggleSettings() {
-    this.isSettingsOpen = !this.isSettingsOpen;
+  private getExpiryStatus(expiryDate: string): string {
+    const now = new Date();
+    const expiry = new Date(expiryDate);
+    const daysUntilExpiry = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilExpiry < 0) {
+      return 'expired';
+    } else if (daysUntilExpiry <= 7) {
+      return 'expiring-soon';
+    }
+    return '';
   }
 
-  private handleLogout() {
-    console.log('[MyLinks] Logout requested');
-    // TODO: Implement logout functionality
+  private viewLink(link: LinkData) {
+    console.log('[MyLinks] View link:', link.id);
+    this.modalMode = 'view';
+    this.selectedLinkId = link.id;
+    this.selectedLink = {
+      title: link.title,
+      longLink: link.longLink,
+      domain: link.domain,
+      code: link.code, // This will be the alias from backend
+      expiryDate: link.expiryDate || '', // Populate if exists, empty if not
+      password: '' // Always empty - password not shown for security
+    };
+    this.showModal = true;
+  }
+
+  private editLink(link: LinkData) {
+    console.log('[MyLinks] Edit link:', link.id);
+    this.modalMode = 'edit';
+    this.selectedLinkId = link.id;
+    this.selectedLink = {
+      title: link.title,
+      longLink: link.longLink,
+      domain: link.domain, // Preselect the domain
+      code: link.code, // Show alias (same as user's wish/custom code)
+      expiryDate: link.expiryDate || '', // Prepopulate if exists
+      password: '' // Empty - user must enter new password to change
+    };
+    this.showModal = true;
+  }
+
+  private deleteLink(link: LinkData) {
+    console.log('[MyLinks] Delete link:', link.id);
+    if (confirm(`Are you sure you want to delete "${link.title || link.shortLink}"?`)) {
+      this.links = this.links.filter(l => l.id !== link.id);
+    }
+  }
+
+  // Search and Filter Methods
+  private handleSearchInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.searchQuery = input.value;
+    this.currentPage = 1; // Reset to first page when searching
+  }
+
+  private handleSortChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.sortBy = select.value;
+    this.currentPage = 1; // Reset to first page when sorting
+  }
+
+  private handleFilterChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.filterBy = select.value;
+    this.currentPage = 1; // Reset to first page when filtering
+  }
+
+  private getFilteredLinks(): LinkData[] {
+    let filtered = this.links;
+
+    // Apply search filter
+    if (this.searchQuery.trim()) {
+      const query = this.searchQuery.toLowerCase();
+      filtered = filtered.filter(link => 
+        (link.title || '').toLowerCase().includes(query) ||
+        link.shortLink.toLowerCase().includes(query) ||
+        link.longLink.toLowerCase().includes(query) ||
+        link.domain.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply status/protection filter
+    if (this.filterBy !== 'all') {
+      filtered = filtered.filter(link => {
+        switch (this.filterBy) {
+          case 'active':
+          case 'expired':
+          case 'disabled':
+            return link.status === this.filterBy;
+          case 'protected':
+            return link.hasPassword;
+          case 'public':
+            return !link.hasPassword;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (this.sortBy) {
+        case 'created':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'title':
+          return (a.title || '').localeCompare(b.title || '');
+        case 'clicks':
+          return b.clicks - a.clicks;
+        case 'expiry':
+          if (!a.expiryDate && !b.expiryDate) return 0;
+          if (!a.expiryDate) return 1;
+          if (!b.expiryDate) return -1;
+          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }
+
+  // Pagination Methods
+  private getPaginatedLinks(): LinkData[] {
+    const filtered = this.getFilteredLinks();
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }
+
+  private getTotalPages(): number {
+    return Math.ceil(this.getFilteredLinks().length / this.itemsPerPage);
+  }
+
+  private getPaginationStartIndex(): number {
+    return Math.min((this.currentPage - 1) * this.itemsPerPage + 1, this.getFilteredLinks().length);
+  }
+
+  private getPaginationEndIndex(): number {
+    return Math.min(this.currentPage * this.itemsPerPage, this.getFilteredLinks().length);
+  }
+
+  private getPaginationButtons(): number[] {
+    const totalPages = this.getTotalPages();
+    const buttons: number[] = [];
+    const maxButtons = 5;
+
+    let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+    // Adjust start page if we're near the end
+    if (endPage - startPage < maxButtons - 1) {
+      startPage = Math.max(1, endPage - maxButtons + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      buttons.push(i);
+    }
+
+    return buttons;
+  }
+
+  private goToPage(page: number) {
+    this.currentPage = page;
+  }
+
+  private goToPreviousPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+    }
+  }
+
+  private goToNextPage() {
+    if (this.currentPage < this.getTotalPages()) {
+      this.currentPage++;
+    }
   }
 }

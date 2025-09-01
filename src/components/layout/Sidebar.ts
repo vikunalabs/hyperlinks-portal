@@ -1,10 +1,27 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { navigationStore } from '../../stores/navigation.store';
 
 @customElement('app-sidebar')
 export class Sidebar extends LitElement {
   @property() activeRoute = '';
   @state() private isSettingsOpen = false;
+  
+  private unsubscribe?: () => void;
+
+  connectedCallback() {
+    super.connectedCallback();
+    // Subscribe to navigation store changes
+    this.unsubscribe = navigationStore.subscribe((state) => {
+      this.isSettingsOpen = state.isSettingsOpen;
+    });
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    // Clean up subscription
+    this.unsubscribe?.();
+  }
 
   static styles = css`
     :host {
@@ -283,15 +300,13 @@ export class Sidebar extends LitElement {
 
   private navigateTo(path: string) {
     console.log(`[Sidebar] Navigating to ${path}`);
-    this.dispatchEvent(new CustomEvent('navigate', {
-      detail: { path },
-      bubbles: true,
-      composed: true
-    }));
+    // Use navigation store for centralized navigation
+    navigationStore.getState().navigateToRoute(path);
   }
 
   private toggleSettings() {
-    this.isSettingsOpen = !this.isSettingsOpen;
+    // Use navigation store for state management
+    navigationStore.getState().toggleSettings();
   }
 
   private handleLogout() {

@@ -1,6 +1,9 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { authService } from '@/services/auth.service';
 import { isValidUsernameOrEmail, ValidationMessages } from '../../utils';
+import { EyeIcon, EyeOffIcon } from '../../shared/icons';
+import { allModalStyles } from '../../shared/styles/modal-styles';
 
 @customElement('login-modal')
 export class LoginModal extends LitElement {
@@ -9,313 +12,83 @@ export class LoginModal extends LitElement {
   @state() private username = '';
   @state() private password = '';
   @state() private rememberMe = false;
+  @state() private isLoading = false;
+  @state() private error = '';
   @state() private usernameTouched = false;
   @state() private passwordTouched = false;
   
   private previousActiveElement: Element | null = null;
 
-  static styles = css`
-    .modal-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: var(--bg-overlay);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: var(--z-modal-backdrop);
-      opacity: 0;
-      visibility: hidden;
-      transition: all var(--transition-slow);
-    }
-
-    .modal-backdrop.open {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .modal {
-      background: var(--bg-primary);
-      border-radius: var(--radius-lg);
-      padding: var(--space-xl);
-      width: 100%;
-      max-width: 400px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: var(--shadow-xl);
-      transform: scale(0.9);
-      transition: transform var(--transition-slow);
-      z-index: var(--z-modal);
-    }
-
-    .modal-backdrop.open .modal {
-      transform: scale(1);
-    }
-
-    .form-group {
-      margin-bottom: var(--space-md);
-    }
-
-    .form-label {
-      display: block;
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-medium);
-      color: var(--text-primary);
-      margin-bottom: var(--space-sm);
-    }
-
-    .form-label .required {
-      color: var(--color-danger);
-      margin-left: var(--space-xs);
-    }
-
-    .form-input {
-      width: 100%;
-      padding: var(--space-sm) var(--space-md);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      font-size: var(--font-size-md);
-      transition: border-color var(--transition-base), box-shadow var(--transition-base);
-      box-sizing: border-box;
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-    }
-
-    .form-input:focus {
-      outline: none;
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px var(--color-primary-light);
-    }
-
-    .form-input.error {
-      border-color: var(--color-danger);
-    }
-
-    .form-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .btn {
-      padding: var(--space-sm) var(--space-lg);
-      font-size: var(--font-size-md);
-      font-weight: var(--font-weight-medium);
-      border: 2px solid transparent;
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: all var(--transition-base);
-      text-decoration: none;
-      display: inline-block;
-      min-width: 120px;
-      text-align: center;
-      line-height: var(--line-height-base);
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background-color: var(--color-primary);
-      color: var(--text-inverse);
-      border-color: var(--color-primary);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background-color: var(--color-primary-hover);
-      border-color: var(--color-primary-hover);
-      transform: translateY(-1px);
-    }
-
-    .modal-header {
-      text-align: center;
-      margin-bottom: var(--space-lg);
-    }
-
-    .modal-title {
-      font-size: var(--font-size-2xl);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-      margin: 0 0 var(--space-sm) 0;
-    }
-
-    .modal-subtitle {
-      color: var(--text-secondary);
-      font-size: var(--font-size-sm);
-    }
-
-    /* Form error styling - using smaller font size */
-    .form-error {
-      color: var(--color-danger);
-      font-size: var(--font-size-xs);
-      margin-top: var(--space-xs);
-      display: block;
-    }
-
-    .password-input-container {
-      position: relative;
-    }
-
-    .password-toggle {
-      position: absolute;
-      right: var(--space-sm);
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--text-secondary);
-      padding: var(--space-xs);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .password-toggle:hover {
-      color: var(--color-primary);
-    }
-
-    .password-toggle svg {
-      width: var(--font-size-xl);
-      height: var(--font-size-xl);
-    }
-
-    .checkbox-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--space-md);
-    }
-
-    .checkbox-container {
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
-    }
-
-    .checkbox {
-      width: var(--space-md);
-      height: var(--space-md);
-    }
-
-    .checkbox-label {
-      font-size: var(--font-size-sm);
-      color: var(--text-primary);
-      cursor: pointer;
-    }
-
-    .forgot-password-link {
-      color: var(--color-primary);
-      text-decoration: none;
-      font-size: var(--font-size-sm);
-    }
-
-    .forgot-password-link:hover {
-      text-decoration: underline;
-    }
-
-    /* Using shared button styles from components.css with overrides */
-    .btn {
-      width: 100%;
-      margin-bottom: 0;
-    }
-
-    .btn-primary {
-      margin-bottom: var(--space-md);
-    }
-
-    .btn-google {
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-      border: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-sm);
-      margin-top: var(--space-md);
-      padding: var(--space-sm) var(--space-lg);
-      font-size: var(--font-size-md);
-      font-weight: var(--font-weight-medium);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: all var(--transition-base);
-    }
-
-    .btn-google:hover {
-      background-color: var(--bg-secondary);
-    }
-
-    .google-icon {
-      width: var(--font-size-xl);
-      height: var(--font-size-xl);
-    }
-
-    .divider {
-      display: flex;
-      align-items: center;
-      margin: var(--space-md) 0;
-      color: var(--text-secondary);
-      font-size: var(--font-size-sm);
-    }
-
-    .divider::before,
-    .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background-color: var(--border-color-light);
-    }
-
-    .divider span {
-      padding: 0 var(--space-md);
-    }
-
-    .links {
-      text-align: center;
-      margin-top: var(--space-md);
-    }
-
-    .link {
-      color: var(--color-primary);
-      text-decoration: none;
-      font-size: var(--font-size-sm);
-    }
-
-    .link:hover {
-      text-decoration: underline;
-    }
-
-    .close-btn {
-      position: absolute;
-      top: var(--space-md);
-      right: var(--space-md);
-      background: none;
-      border: none;
-      font-size: var(--font-size-2xl);
-      cursor: pointer;
-      color: var(--text-secondary);
-      width: var(--space-xl);
-      height: var(--space-xl);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: var(--radius-sm);
-    }
-
-    .close-btn:hover {
-      background-color: var(--bg-secondary);
-      color: var(--text-primary);
-    }
-
-    @media (max-width: 480px) {
+  static styles = [
+    ...allModalStyles,
+    css`
+      /* LoginModal specific styles only */
       .modal {
-        margin: var(--space-md);
-        padding: var(--space-lg);
+        max-width: 400px; /* Small modal size for login */
       }
-    }
-  `;
+
+      .checkbox-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: var(--space-lg);
+      }
+
+      .checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+
+      .checkbox-container input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+      }
+
+      .checkbox-container label {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+      }
+
+      .forgot-password {
+        color: var(--color-primary);
+        text-decoration: none;
+        font-size: var(--font-size-sm);
+        transition: color var(--transition-base);
+      }
+
+      .forgot-password:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
+      }
+
+      .google-icon {
+        width: 18px;
+        height: 18px;
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        margin: var(--space-lg) 0;
+        color: var(--text-secondary);
+        font-size: var(--font-size-sm);
+      }
+
+      .divider::before,
+      .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background-color: var(--border-color);
+      }
+
+      .divider span {
+        padding: 0 var(--space-md);
+      }
+    `
+  ];
 
   render() {
     const isFormValid = isValidUsernameOrEmail(this.username) && this.password.length >= 6;
@@ -323,71 +96,72 @@ export class LoginModal extends LitElement {
     const hasPasswordError = this.passwordTouched && this.password.length < 6;
     
     return html`
-      <div 
-        class="modal-backdrop ${this.isOpen ? 'open' : ''}" 
-        @click=${this.handleBackdropClick}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="login-modal-title"
-        aria-describedby="login-modal-description"
-      >
-        <div class="modal" @click=${this.stopPropagation}>
-          <button 
-            class="close-btn" 
-            @click=${this.close}
-            aria-label="Close login modal"
-          >×</button>
+      <div class="modal-backdrop ${this.isOpen ? 'open' : ''}" @click=${this.handleBackdropClick}>
+        <div class="modal modal-sm" @click=${this.handleModalClick}>
+          <button class="close-btn" @click=${this.close} aria-label="Close modal">
+            &times;
+          </button>
           
           <div class="modal-header">
-            <h2 id="login-modal-title" class="modal-title">Sign In</h2>
-            <p id="login-modal-description" class="modal-subtitle">Welcome back! Please sign in to your account</p>
+            <h2 class="modal-title">Welcome Back</h2>
+            <p class="modal-subtitle">Sign in to your account</p>
           </div>
+
+          ${this.error ? html`
+            <div class="form-error" style="text-align: center; margin-bottom: var(--space-lg);">
+              ${this.error}
+            </div>
+          ` : ''}
 
           <form @submit=${this.handleSubmit}>
             <div class="form-group">
-              <label class="form-label" for="username">Username or Email<span class="required">*</span></label>
+              <label class="form-label" for="username">Email or Username</label>
               <input
-                class="form-input ${hasUsernameError ? 'error' : ''}"
                 type="text"
                 id="username"
+                class="form-input"
                 .value=${this.username}
-                @input=${this.handleUsernameChange}
-                placeholder="john.doe or john.doe@example.com"
-                autocomplete="off"
-                spellcheck="false"
-                required
+                @input=${this.handleUsernameInput}
+                @blur=${this.handleUsernameBlur}
+                ?disabled=${this.isLoading}
+                placeholder="Enter your email or username"
+                autocomplete="username"
                 aria-describedby=${hasUsernameError ? 'username-error' : ''}
-                aria-invalid=${hasUsernameError ? 'true' : 'false'}
+                aria-invalid=${hasUsernameError}
               />
-              ${hasUsernameError ? html`<span id="username-error" class="form-error" role="alert">${ValidationMessages.INVALID_USERNAME_OR_EMAIL}</span>` : ''}
+              ${hasUsernameError ? html`
+                <span id="username-error" class="form-error">${ValidationMessages.INVALID_USERNAME_OR_EMAIL}</span>
+              ` : ''}
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="password">Password<span class="required">*</span></label>
+              <label class="form-label" for="password">Password</label>
               <div class="password-input-container">
                 <input
-                  class="form-input ${hasPasswordError ? 'error' : ''}"
                   type=${this.showPassword ? 'text' : 'password'}
                   id="password"
+                  class="form-input"
                   .value=${this.password}
-                  @input=${this.handlePasswordChange}
-                  placeholder="********"
-                  autocomplete="off"
-                  spellcheck="false"
-                  required
+                  @input=${this.handlePasswordInput}
+                  @blur=${this.handlePasswordBlur}
+                  ?disabled=${this.isLoading}
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
                   aria-describedby=${hasPasswordError ? 'password-error' : ''}
-                  aria-invalid=${hasPasswordError ? 'true' : 'false'}
+                  aria-invalid=${hasPasswordError}
                 />
                 <button
                   type="button"
                   class="password-toggle"
                   @click=${this.togglePasswordVisibility}
-                  title=${this.showPassword ? 'Hide password' : 'Show password'}
+                  aria-label=${this.showPassword ? 'Hide password' : 'Show password'}
                 >
-                  ${this.showPassword ? this.eyeIcon : this.eyeOffIcon}
+                  ${this.showPassword ? this.eyeOffIcon : this.eyeIcon}
                 </button>
               </div>
-              ${hasPasswordError ? html`<span id="password-error" class="form-error" role="alert">${ValidationMessages.PASSWORD_TOO_SHORT()}</span>` : ''}
+              ${hasPasswordError ? html`
+                <span id="password-error" class="form-error">Password must be at least 6 characters</span>
+              ` : ''}
             </div>
 
             <div class="checkbox-row">
@@ -395,25 +169,34 @@ export class LoginModal extends LitElement {
                 <input
                   type="checkbox"
                   id="remember-me"
-                  class="checkbox"
                   .checked=${this.rememberMe}
                   @change=${this.handleRememberMeChange}
+                  ?disabled=${this.isLoading}
                 />
-                <label class="checkbox-label" for="remember-me">Remember me</label>
+                <label for="remember-me">Remember me</label>
               </div>
-              <a href="#" class="forgot-password-link" @click=${this.handleForgotPasswordClick}>
+              <a href="#" class="forgot-password" @click=${this.handleForgotPasswordClick}>
                 Forgot password?
               </a>
             </div>
 
-            <button type="submit" class="btn btn-primary" ?disabled=${!isFormValid}>Sign In</button>
+            <div class="modal-footer">
+              <button
+                type="submit"
+                class="btn btn-primary"
+                ?disabled=${!isFormValid || this.isLoading}
+                style="width: 100%;"
+              >
+                ${this.isLoading ? 'Signing In...' : 'Sign In'}
+              </button>
+            </div>
           </form>
 
           <div class="divider">
-            <span>Or continue with</span>
+            <span>or</span>
           </div>
 
-          <button class="btn btn-google" @click=${this.handleGoogleLogin}>
+          <button class="btn btn-google" @click=${this.handleGoogleLogin} ?disabled=${this.isLoading}>
             ${this.googleIcon}
             Sign in with Google
           </button>
@@ -427,20 +210,11 @@ export class LoginModal extends LitElement {
   }
 
   private get eyeIcon() {
-    return html`
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-      </svg>
-    `;
+    return EyeIcon;
   }
 
   private get eyeOffIcon() {
-    return html`
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 11-4.243-4.243m4.242 4.242L9.88 9.88"/>
-      </svg>
-    `;
+    return EyeOffIcon;
   }
 
   private get googleIcon() {
@@ -455,32 +229,25 @@ export class LoginModal extends LitElement {
   }
 
   public open() {
-    // Store current focus for restoration
-    this.previousActiveElement = document.activeElement;
-    
+    this.previousActiveElement = document.activeElement as Element;
     this.isOpen = true;
-    document.addEventListener('keydown', this.handleKeyDown);
+    this.error = '';
     
     // Focus management for accessibility
-    this.updateComplete.then(() => {
-      const firstInput = this.shadowRoot?.querySelector('#username') as HTMLInputElement;
-      if (firstInput) {
-        firstInput.focus();
-      }
-    });
+    setTimeout(() => {
+      const usernameInput = this.shadowRoot?.querySelector('#username') as HTMLInputElement;
+      usernameInput?.focus();
+    }, 100);
   }
 
   public close() {
     this.isOpen = false;
-    document.removeEventListener('keydown', this.handleKeyDown);
-    
-    // Restore focus for accessibility
-    if (this.previousActiveElement && this.previousActiveElement instanceof HTMLElement) {
-      this.previousActiveElement.focus();
-    }
-    this.previousActiveElement = null;
-    
     this.resetForm();
+    
+    // Restore focus
+    if (this.previousActiveElement && 'focus' in this.previousActiveElement) {
+      (this.previousActiveElement as HTMLElement).focus();
+    }
   }
 
   private resetForm() {
@@ -488,82 +255,95 @@ export class LoginModal extends LitElement {
     this.password = '';
     this.rememberMe = false;
     this.showPassword = false;
+    this.isLoading = false;
+    this.error = '';
     this.usernameTouched = false;
     this.passwordTouched = false;
   }
 
-  private handleBackdropClick(e: Event) {
-    if (e.target === e.currentTarget) {
+  private handleBackdropClick(event: Event) {
+    if (event.target === event.currentTarget) {
       this.close();
     }
   }
 
-  private stopPropagation(e: Event) {
-    e.stopPropagation();
+  private handleModalClick(event: Event) {
+    event.stopPropagation();
+  }
+
+  private handleUsernameInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.username = input.value;
+    if (this.error) this.error = '';
+  }
+
+  private handleUsernameBlur() {
+    this.usernameTouched = true;
+  }
+
+  private handlePasswordInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.password = input.value;
+    if (this.error) this.error = '';
+  }
+
+  private handlePasswordBlur() {
+    this.passwordTouched = true;
+  }
+
+  private handleRememberMeChange(event: Event) {
+    const checkbox = event.target as HTMLInputElement;
+    this.rememberMe = checkbox.checked;
   }
 
   private togglePasswordVisibility() {
     this.showPassword = !this.showPassword;
   }
 
-  private handleUsernameChange(e: Event) {
-    const target = e.target as HTMLInputElement;
-    this.username = target.value;
-    this.usernameTouched = true;
-  }
-
-  private handlePasswordChange(e: Event) {
-    const target = e.target as HTMLInputElement;
-    this.password = target.value;
-    this.passwordTouched = true;
-  }
-
-  private handleRememberMeChange(e: Event) {
-    const target = e.target as HTMLInputElement;
-    this.rememberMe = target.checked;
-  }
-
-
-  private handleSubmit(e: Event) {
-    e.preventDefault();
-    console.log('Login form submitted:', {
-      username: this.username,
-      password: this.password,
-      rememberMe: this.rememberMe
-    });
+  private async handleSubmit(event: Event) {
+    event.preventDefault();
     
-    // TODO: Implement actual login logic
-    this.close();
+    if (!isValidUsernameOrEmail(this.username) || this.password.length < 6) {
+      this.usernameTouched = true;
+      this.passwordTouched = true;
+      return;
+    }
+
+    this.isLoading = true;
+    this.error = '';
+
+    try {
+      await authService.login({
+        usernameOrEmail: this.username,
+        password: this.password,
+        rememberMe: this.rememberMe
+      });
+      
+      this.close();
+      this.dispatchEvent(new CustomEvent('login-success', { bubbles: true, composed: true }));
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Login failed. Please try again.';
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   private handleGoogleLogin() {
-    console.log('Google login clicked');
-    // TODO: Implement Google login logic
+    // Clear any existing form errors when using Google sign-in
+    this.error = '';
+    this.usernameTouched = false;
+    this.passwordTouched = false;
+    
+    this.dispatchEvent(new CustomEvent('google-login', { bubbles: true, composed: true }));
   }
 
-  private handleRegisterClick(e: Event) {
-    e.preventDefault();
-    this.close();
-    // Dispatch custom event to open register modal
-    this.dispatchEvent(new CustomEvent('open-register-modal', { 
-      bubbles: true,
-      composed: true 
-    }));
+  private handleForgotPasswordClick(event: Event) {
+    event.preventDefault();
+    this.dispatchEvent(new CustomEvent('forgot-password', { bubbles: true, composed: true }));
   }
 
-  private handleForgotPasswordClick(e: Event) {
-    e.preventDefault();
-    this.close();
-    // Dispatch custom event to open forgot password modal
-    this.dispatchEvent(new CustomEvent('open-forgot-password-modal', { 
-      bubbles: true,
-      composed: true 
-    }));
-  }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && this.isOpen) {
-      this.close();
-    }
+  private handleRegisterClick(event: Event) {
+    event.preventDefault();
+    this.dispatchEvent(new CustomEvent('show-register', { bubbles: true, composed: true }));
   }
 }

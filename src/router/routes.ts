@@ -152,31 +152,31 @@ export const routes: RouteConfig[] = [
   {
     path: ROUTES.DASHBOARD,
     handler: routeHandlers.dashboard,
-    protected: false,
+    protected: true,
     title: 'Dashboard'
   },
   {
     path: ROUTES.MY_LINKS,
     handler: routeHandlers.myLinks,
-    protected: false,
+    protected: true,
     title: 'My Links'
   },
   {
     path: ROUTES.QR_CODES,
     handler: routeHandlers.qrCodes,
-    protected: false,
+    protected: true,
     title: 'QR Codes'
   },
   {
     path: ROUTES.ANALYTICS,
     handler: routeHandlers.analytics,
-    protected: false,
+    protected: true,
     title: 'Analytics'
   },
   {
     path: ROUTES.PROFILE,
     handler: routeHandlers.profile,
-    protected: false,
+    protected: true,
     title: 'Profile'
   }
 ];

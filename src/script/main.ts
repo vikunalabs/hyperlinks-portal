@@ -9,6 +9,13 @@ import '../pages/public/HomePage';
 import '../pages/public/TermsPage';
 import '../pages/public/PrivacyPage';
 
+// Import layout components
+import '../components/layout/Sidebar';
+import '../components/layout/ProtectedPageLayout';
+
+// Import form components
+import '../components/forms/AddLinkModal';
+
 // Import protected pages
 import '../pages/protected/DashboardPage';
 import '../pages/protected/MyLinksPage';
