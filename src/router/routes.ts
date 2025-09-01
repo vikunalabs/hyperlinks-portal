@@ -21,8 +21,9 @@ export const ROUTES = {
 // Route handlers - placeholder functions that will be implemented with page components
 const routeHandlers = {
   home: () => {
-    console.log('[Router] Navigating to Dashboard');
-    // TODO: Render DashboardPage component
+    console.log('[Router] Navigating to Home Page');
+    const app = document.getElementById('app')!;
+    app.innerHTML = '<home-page></home-page>';
   },
   login: () => {
     console.log('[Router] Navigating to Login');
@@ -55,8 +56,8 @@ export const routes: RouteConfig[] = [
   {
     path: ROUTES.HOME,
     handler: routeHandlers.home,
-    protected: true,
-    title: 'Dashboard'
+    protected: false,
+    title: 'Home'
   },
   {
     path: ROUTES.LOGIN,
