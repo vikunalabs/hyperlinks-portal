@@ -1,2 +1,6 @@
 // Protected Pages Exports
-// Future protected pages will be exported here
+export * from './DashboardPage';
+export * from './MyLinksPage';
+export * from './QRCodesPage';
+export * from './AnalyticsPage';
+export * from './ProfilePage';

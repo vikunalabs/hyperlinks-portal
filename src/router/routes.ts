@@ -17,7 +17,12 @@ export const ROUTES = {
   CONFIRM_ACCOUNT: '/confirm-account/:token',
   RESEND_VERIFICATION: '/resend-verification',
   TERMS: '/terms',
-  PRIVACY: '/privacy'
+  PRIVACY: '/privacy',
+  DASHBOARD: '/dashboard',
+  MY_LINKS: '/links',
+  QR_CODES: '/qr-codes',
+  ANALYTICS: '/analytics',
+  PROFILE: '/profile'
 } as const;
 
 // Route handlers - placeholder functions that will be implemented with page components
@@ -60,6 +65,31 @@ const routeHandlers = {
     console.log('[Router] Navigating to Privacy Policy');
     const app = document.getElementById('app')!;
     app.innerHTML = '<privacy-page></privacy-page>';
+  },
+  dashboard: () => {
+    console.log('[Router] Navigating to Dashboard');
+    const app = document.getElementById('app')!;
+    app.innerHTML = '<dashboard-page></dashboard-page>';
+  },
+  myLinks: () => {
+    console.log('[Router] Navigating to My Links');
+    const app = document.getElementById('app')!;
+    app.innerHTML = '<my-links-page></my-links-page>';
+  },
+  qrCodes: () => {
+    console.log('[Router] Navigating to QR Codes');
+    const app = document.getElementById('app')!;
+    app.innerHTML = '<qr-codes-page></qr-codes-page>';
+  },
+  analytics: () => {
+    console.log('[Router] Navigating to Analytics');
+    const app = document.getElementById('app')!;
+    app.innerHTML = '<analytics-page></analytics-page>';
+  },
+  profile: () => {
+    console.log('[Router] Navigating to Profile');
+    const app = document.getElementById('app')!;
+    app.innerHTML = '<profile-page></profile-page>';
   }
 };
 
@@ -118,5 +148,35 @@ export const routes: RouteConfig[] = [
     handler: routeHandlers.privacy,
     protected: false,
     title: 'Privacy Policy'
+  },
+  {
+    path: ROUTES.DASHBOARD,
+    handler: routeHandlers.dashboard,
+    protected: false,
+    title: 'Dashboard'
+  },
+  {
+    path: ROUTES.MY_LINKS,
+    handler: routeHandlers.myLinks,
+    protected: false,
+    title: 'My Links'
+  },
+  {
+    path: ROUTES.QR_CODES,
+    handler: routeHandlers.qrCodes,
+    protected: false,
+    title: 'QR Codes'
+  },
+  {
+    path: ROUTES.ANALYTICS,
+    handler: routeHandlers.analytics,
+    protected: false,
+    title: 'Analytics'
+  },
+  {
+    path: ROUTES.PROFILE,
+    handler: routeHandlers.profile,
+    protected: false,
+    title: 'Profile'
   }
 ];
