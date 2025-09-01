@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { isValidUsernameOrEmail, ValidationMessages } from '../../utils';
 
 @customElement('login-modal')
 export class LoginModal extends LitElement {
@@ -8,6 +9,10 @@ export class LoginModal extends LitElement {
   @state() private username = '';
   @state() private password = '';
   @state() private rememberMe = false;
+  @state() private usernameTouched = false;
+  @state() private passwordTouched = false;
+  
+  private previousActiveElement: Element | null = null;
 
   static styles = css`
     .modal-backdrop {
@@ -16,14 +21,14 @@ export class LoginModal extends LitElement {
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: var(--bg-overlay);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: var(--z-modal-backdrop);
       opacity: 0;
       visibility: hidden;
-      transition: all 0.3s ease;
+      transition: all var(--transition-slow);
     }
 
     .modal-backdrop.open {
@@ -32,68 +37,121 @@ export class LoginModal extends LitElement {
     }
 
     .modal {
-      background: white;
-      border-radius: 0.75rem;
-      padding: 2rem;
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
       width: 100%;
       max-width: 400px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-xl);
       transform: scale(0.9);
-      transition: transform 0.3s ease;
+      transition: transform var(--transition-slow);
+      z-index: var(--z-modal);
     }
 
     .modal-backdrop.open .modal {
       transform: scale(1);
     }
 
-    .modal-header {
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .modal-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #212529;
-      margin: 0 0 0.5rem 0;
-    }
-
-    .modal-subtitle {
-      color: #6c757d;
-      font-size: 0.9rem;
-    }
-
     .form-group {
-      margin-bottom: 1rem;
+      margin-bottom: var(--space-md);
     }
 
     .form-label {
       display: block;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #374151;
-      margin-bottom: 0.5rem;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: var(--space-sm);
     }
 
     .form-label .required {
-      color: #dc3545;
-      margin-left: 0.25rem;
+      color: var(--color-danger);
+      margin-left: var(--space-xs);
     }
 
     .form-input {
       width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #d1d5db;
-      border-radius: 0.5rem;
-      font-size: 1rem;
-      transition: border-color 0.2s ease;
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-md);
+      transition: border-color var(--transition-base), box-shadow var(--transition-base);
       box-sizing: border-box;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
     }
 
     .form-input:focus {
       outline: none;
-      border-color: #007bff;
-      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+
+    .form-input.error {
+      border-color: var(--color-danger);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .btn {
+      padding: var(--space-sm) var(--space-lg);
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-medium);
+      border: 2px solid transparent;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-base);
+      text-decoration: none;
+      display: inline-block;
+      min-width: 120px;
+      text-align: center;
+      line-height: var(--line-height-base);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background-color: var(--color-primary);
+      color: var(--text-inverse);
+      border-color: var(--color-primary);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--color-primary-hover);
+      border-color: var(--color-primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .modal-header {
+      text-align: center;
+      margin-bottom: var(--space-lg);
+    }
+
+    .modal-title {
+      font-size: var(--font-size-2xl);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      margin: 0 0 var(--space-sm) 0;
+    }
+
+    .modal-subtitle {
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+
+    /* Form error styling - using smaller font size */
+    .form-error {
+      color: var(--color-danger);
+      font-size: var(--font-size-xs);
+      margin-top: var(--space-xs);
+      display: block;
     }
 
     .password-input-container {
@@ -102,110 +160,104 @@ export class LoginModal extends LitElement {
 
     .password-toggle {
       position: absolute;
-      right: 0.75rem;
+      right: var(--space-sm);
       top: 50%;
       transform: translateY(-50%);
       background: none;
       border: none;
       cursor: pointer;
-      color: #6c757d;
-      padding: 0.25rem;
+      color: var(--text-secondary);
+      padding: var(--space-xs);
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .password-toggle:hover {
-      color: #007bff;
+      color: var(--color-primary);
     }
 
     .password-toggle svg {
-      width: 1.25rem;
-      height: 1.25rem;
+      width: var(--font-size-xl);
+      height: var(--font-size-xl);
     }
 
     .checkbox-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
+      margin-bottom: var(--space-md);
     }
 
     .checkbox-container {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: var(--space-sm);
     }
 
     .checkbox {
-      width: 1rem;
-      height: 1rem;
+      width: var(--space-md);
+      height: var(--space-md);
     }
 
     .checkbox-label {
-      font-size: 0.875rem;
-      color: #374151;
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
       cursor: pointer;
     }
 
     .forgot-password-link {
-      color: #007bff;
+      color: var(--color-primary);
       text-decoration: none;
-      font-size: 0.875rem;
+      font-size: var(--font-size-sm);
     }
 
     .forgot-password-link:hover {
       text-decoration: underline;
     }
 
+    /* Using shared button styles from components.css with overrides */
     .btn {
       width: 100%;
-      padding: 0.75rem;
-      font-size: 1rem;
-      font-weight: 500;
-      border: none;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
       margin-bottom: 0;
     }
 
     .btn-primary {
-      background-color: #007bff;
-      color: white;
-      margin-bottom: 1rem;
-    }
-
-    .btn-primary:hover {
-      background-color: #0056b3;
+      margin-bottom: var(--space-md);
     }
 
     .btn-google {
-      background-color: white;
-      color: #374151;
-      border: 1px solid #d1d5db;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
-      margin-top: 1rem;
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+      padding: var(--space-sm) var(--space-lg);
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-medium);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-base);
     }
 
     .btn-google:hover {
-      background-color: #f9fafb;
+      background-color: var(--bg-secondary);
     }
 
     .google-icon {
-      width: 1.25rem;
-      height: 1.25rem;
+      width: var(--font-size-xl);
+      height: var(--font-size-xl);
     }
 
     .divider {
       display: flex;
       align-items: center;
-      margin: 1rem 0;
-      color: #6c757d;
-      font-size: 0.875rem;
+      margin: var(--space-md) 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
     }
 
     .divider::before,
@@ -213,22 +265,22 @@ export class LoginModal extends LitElement {
       content: '';
       flex: 1;
       height: 1px;
-      background-color: #e5e7eb;
+      background-color: var(--border-color-light);
     }
 
     .divider span {
-      padding: 0 1rem;
+      padding: 0 var(--space-md);
     }
 
     .links {
       text-align: center;
-      margin-top: 1rem;
+      margin-top: var(--space-md);
     }
 
     .link {
-      color: #007bff;
+      color: var(--color-primary);
       text-decoration: none;
-      font-size: 0.875rem;
+      font-size: var(--font-size-sm);
     }
 
     .link:hover {
@@ -237,50 +289,65 @@ export class LoginModal extends LitElement {
 
     .close-btn {
       position: absolute;
-      top: 1rem;
-      right: 1rem;
+      top: var(--space-md);
+      right: var(--space-md);
       background: none;
       border: none;
-      font-size: 1.5rem;
+      font-size: var(--font-size-2xl);
       cursor: pointer;
-      color: #6c757d;
-      width: 2rem;
-      height: 2rem;
+      color: var(--text-secondary);
+      width: var(--space-xl);
+      height: var(--space-xl);
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 0.25rem;
+      border-radius: var(--radius-sm);
     }
 
     .close-btn:hover {
-      background-color: #f8f9fa;
-      color: #212529;
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
     }
 
     @media (max-width: 480px) {
       .modal {
-        margin: 1rem;
-        padding: 1.5rem;
+        margin: var(--space-md);
+        padding: var(--space-lg);
       }
     }
   `;
 
   render() {
+    const isFormValid = isValidUsernameOrEmail(this.username) && this.password.length >= 6;
+    const hasUsernameError = this.usernameTouched && !isValidUsernameOrEmail(this.username);
+    const hasPasswordError = this.passwordTouched && this.password.length < 6;
+    
     return html`
-      <div class="modal-backdrop ${this.isOpen ? 'open' : ''}" @click=${this.handleBackdropClick}>
+      <div 
+        class="modal-backdrop ${this.isOpen ? 'open' : ''}" 
+        @click=${this.handleBackdropClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-modal-title"
+        aria-describedby="login-modal-description"
+      >
         <div class="modal" @click=${this.stopPropagation}>
-          <button class="close-btn" @click=${this.close}>×</button>
+          <button 
+            class="close-btn" 
+            @click=${this.close}
+            aria-label="Close login modal"
+          >×</button>
           
           <div class="modal-header">
-            <h2 class="modal-title">Sign In</h2>
-            <p class="modal-subtitle">Welcome back! Please sign in to your account</p>
+            <h2 id="login-modal-title" class="modal-title">Sign In</h2>
+            <p id="login-modal-description" class="modal-subtitle">Welcome back! Please sign in to your account</p>
           </div>
 
           <form @submit=${this.handleSubmit}>
             <div class="form-group">
               <label class="form-label" for="username">Username or Email<span class="required">*</span></label>
               <input
-                class="form-input"
+                class="form-input ${hasUsernameError ? 'error' : ''}"
                 type="text"
                 id="username"
                 .value=${this.username}
@@ -289,14 +356,17 @@ export class LoginModal extends LitElement {
                 autocomplete="off"
                 spellcheck="false"
                 required
+                aria-describedby=${hasUsernameError ? 'username-error' : ''}
+                aria-invalid=${hasUsernameError ? 'true' : 'false'}
               />
+              ${hasUsernameError ? html`<span id="username-error" class="form-error" role="alert">${ValidationMessages.INVALID_USERNAME_OR_EMAIL}</span>` : ''}
             </div>
 
             <div class="form-group">
               <label class="form-label" for="password">Password<span class="required">*</span></label>
               <div class="password-input-container">
                 <input
-                  class="form-input"
+                  class="form-input ${hasPasswordError ? 'error' : ''}"
                   type=${this.showPassword ? 'text' : 'password'}
                   id="password"
                   .value=${this.password}
@@ -305,6 +375,8 @@ export class LoginModal extends LitElement {
                   autocomplete="off"
                   spellcheck="false"
                   required
+                  aria-describedby=${hasPasswordError ? 'password-error' : ''}
+                  aria-invalid=${hasPasswordError ? 'true' : 'false'}
                 />
                 <button
                   type="button"
@@ -315,6 +387,7 @@ export class LoginModal extends LitElement {
                   ${this.showPassword ? this.eyeIcon : this.eyeOffIcon}
                 </button>
               </div>
+              ${hasPasswordError ? html`<span id="password-error" class="form-error" role="alert">${ValidationMessages.PASSWORD_TOO_SHORT()}</span>` : ''}
             </div>
 
             <div class="checkbox-row">
@@ -333,7 +406,7 @@ export class LoginModal extends LitElement {
               </a>
             </div>
 
-            <button type="submit" class="btn btn-primary">Sign In</button>
+            <button type="submit" class="btn btn-primary" ?disabled=${!isFormValid}>Sign In</button>
           </form>
 
           <div class="divider">
@@ -382,13 +455,31 @@ export class LoginModal extends LitElement {
   }
 
   public open() {
+    // Store current focus for restoration
+    this.previousActiveElement = document.activeElement;
+    
     this.isOpen = true;
     document.addEventListener('keydown', this.handleKeyDown);
+    
+    // Focus management for accessibility
+    this.updateComplete.then(() => {
+      const firstInput = this.shadowRoot?.querySelector('#username') as HTMLInputElement;
+      if (firstInput) {
+        firstInput.focus();
+      }
+    });
   }
 
   public close() {
     this.isOpen = false;
     document.removeEventListener('keydown', this.handleKeyDown);
+    
+    // Restore focus for accessibility
+    if (this.previousActiveElement && this.previousActiveElement instanceof HTMLElement) {
+      this.previousActiveElement.focus();
+    }
+    this.previousActiveElement = null;
+    
     this.resetForm();
   }
 
@@ -397,6 +488,8 @@ export class LoginModal extends LitElement {
     this.password = '';
     this.rememberMe = false;
     this.showPassword = false;
+    this.usernameTouched = false;
+    this.passwordTouched = false;
   }
 
   private handleBackdropClick(e: Event) {
@@ -416,17 +509,20 @@ export class LoginModal extends LitElement {
   private handleUsernameChange(e: Event) {
     const target = e.target as HTMLInputElement;
     this.username = target.value;
+    this.usernameTouched = true;
   }
 
   private handlePasswordChange(e: Event) {
     const target = e.target as HTMLInputElement;
     this.password = target.value;
+    this.passwordTouched = true;
   }
 
   private handleRememberMeChange(e: Event) {
     const target = e.target as HTMLInputElement;
     this.rememberMe = target.checked;
   }
+
 
   private handleSubmit(e: Event) {
     e.preventDefault();

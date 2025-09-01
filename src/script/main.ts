@@ -4,8 +4,10 @@ import '../style/main.css';
 import { appStore } from '../stores';
 import { appRouter } from '../router';
 
-// Import components
-import '../pages/HomePage';
+// Import pages
+import '../pages/public/HomePage';
+import '../pages/public/TermsPage';
+import '../pages/public/PrivacyPage';
 
 // Application entry point
 document.addEventListener('DOMContentLoaded', async () => {

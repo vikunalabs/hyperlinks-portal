@@ -15,7 +15,9 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password/:token',
   CONFIRM_ACCOUNT: '/confirm-account/:token',
-  RESEND_VERIFICATION: '/resend-verification'
+  RESEND_VERIFICATION: '/resend-verification',
+  TERMS: '/terms',
+  PRIVACY: '/privacy'
 } as const;
 
 // Route handlers - placeholder functions that will be implemented with page components
@@ -48,6 +50,16 @@ const routeHandlers = {
   resendVerification: () => {
     console.log('[Router] Navigating to Resend Verification');
     // TODO: Render ResendVerificationPage component
+  },
+  terms: () => {
+    console.log('[Router] Navigating to Terms of Service');
+    const app = document.getElementById('app')!;
+    app.innerHTML = '<terms-page></terms-page>';
+  },
+  privacy: () => {
+    console.log('[Router] Navigating to Privacy Policy');
+    const app = document.getElementById('app')!;
+    app.innerHTML = '<privacy-page></privacy-page>';
   }
 };
 
@@ -94,5 +106,17 @@ export const routes: RouteConfig[] = [
     handler: routeHandlers.resendVerification,
     protected: false,
     title: 'Resend Verification'
+  },
+  {
+    path: ROUTES.TERMS,
+    handler: routeHandlers.terms,
+    protected: false,
+    title: 'Terms of Service'
+  },
+  {
+    path: ROUTES.PRIVACY,
+    handler: routeHandlers.privacy,
+    protected: false,
+    title: 'Privacy Policy'
   }
 ];

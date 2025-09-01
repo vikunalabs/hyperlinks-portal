@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { isValidEmail, isValidUsername, doPasswordsMatch, ValidationMessages } from '../../utils';
 
 @customElement('register-modal')
 export class RegisterModal extends LitElement {
@@ -12,6 +13,12 @@ export class RegisterModal extends LitElement {
   @state() private confirmPassword = '';
   @state() private organisation = '';
   @state() private acceptTerms = false;
+  @state() private usernameTouched = false;
+  @state() private emailTouched = false;
+  @state() private passwordTouched = false;
+  @state() private confirmPasswordTouched = false;
+  
+  private previousActiveElement: Element | null = null;
 
   static styles = css`
     .modal-backdrop {
@@ -20,14 +27,14 @@ export class RegisterModal extends LitElement {
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: var(--bg-overlay);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: var(--z-modal-backdrop);
       opacity: 0;
       visibility: hidden;
-      transition: all 0.3s ease;
+      transition: all var(--transition-slow);
     }
 
     .modal-backdrop.open {
@@ -36,150 +43,79 @@ export class RegisterModal extends LitElement {
     }
 
     .modal {
-      background: white;
-      border-radius: 0.75rem;
-      padding: 2rem;
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
       width: 100%;
       max-width: 450px;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-xl);
       transform: scale(0.9);
-      transition: transform 0.3s ease;
+      transition: transform var(--transition-slow);
+      z-index: var(--z-modal);
     }
 
     .modal-backdrop.open .modal {
       transform: scale(1);
     }
 
-    .modal-header {
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .modal-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #212529;
-      margin: 0 0 0.5rem 0;
-    }
-
-    .modal-subtitle {
-      color: #6c757d;
-      font-size: 0.9rem;
-    }
-
     .form-group {
-      margin-bottom: 1rem;
+      margin-bottom: var(--space-md);
     }
 
     .form-label {
       display: block;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #374151;
-      margin-bottom: 0.5rem;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: var(--space-sm);
     }
 
     .form-label .required {
-      color: #dc3545;
-      margin-left: 0.25rem;
+      color: var(--color-danger);
+      margin-left: var(--space-xs);
     }
 
     .form-input {
       width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #d1d5db;
-      border-radius: 0.5rem;
-      font-size: 1rem;
-      transition: border-color 0.2s ease;
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-md);
+      transition: border-color var(--transition-base), box-shadow var(--transition-base);
       box-sizing: border-box;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
     }
 
     .form-input:focus {
       outline: none;
-      border-color: #007bff;
-      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-light);
     }
 
     .form-input.error {
-      border-color: #dc3545;
+      border-color: var(--color-danger);
     }
 
-    .error-message {
-      color: #dc3545;
-      font-size: 0.75rem;
-      margin-top: 0.25rem;
-    }
-
-    .password-input-container {
-      position: relative;
-    }
-
-    .password-toggle {
-      position: absolute;
-      right: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #6c757d;
-      padding: 0.25rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .password-toggle:hover {
-      color: #007bff;
-    }
-
-    .password-toggle svg {
-      width: 1.25rem;
-      height: 1.25rem;
-    }
-
-    .checkbox-container {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-
-    .checkbox {
-      width: 1rem;
-      height: 1rem;
-      margin-top: 0.125rem;
-      flex-shrink: 0;
-    }
-
-    .checkbox-label {
-      font-size: 0.875rem;
-      color: #374151;
-      cursor: pointer;
-      line-height: 1.4;
-    }
-
-    .checkbox-label a {
-      color: #007bff;
-      text-decoration: none;
-    }
-
-    .checkbox-label a:hover {
-      text-decoration: underline;
+    .form-input::placeholder {
+      color: var(--text-muted);
     }
 
     .btn {
-      width: 100%;
-      padding: 0.75rem;
-      font-size: 1rem;
-      font-weight: 500;
-      border: none;
-      border-radius: 0.5rem;
+      padding: var(--space-sm) var(--space-lg);
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-medium);
+      border: 2px solid transparent;
+      border-radius: var(--radius-md);
       cursor: pointer;
-      transition: all 0.2s ease;
-      margin-bottom: 0;
+      transition: all var(--transition-base);
+      text-decoration: none;
+      display: inline-block;
+      min-width: 120px;
+      text-align: center;
+      line-height: var(--line-height-base);
     }
 
     .btn:disabled {
@@ -188,41 +124,147 @@ export class RegisterModal extends LitElement {
     }
 
     .btn-primary {
-      background-color: #007bff;
-      color: white;
-      margin-bottom: 1rem;
+      background-color: var(--color-primary);
+      color: var(--text-inverse);
+      border-color: var(--color-primary);
     }
 
     .btn-primary:hover:not(:disabled) {
-      background-color: #0056b3;
+      background-color: var(--color-primary-hover);
+      border-color: var(--color-primary-hover);
+      transform: translateY(-1px);
     }
 
-    .btn-google {
-      background-color: white;
-      color: #374151;
-      border: 1px solid #d1d5db;
+    .modal-header {
+      text-align: center;
+      margin-bottom: var(--space-lg);
+    }
+
+    .modal-title {
+      font-size: var(--font-size-2xl);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      margin: 0 0 var(--space-sm) 0;
+    }
+
+    .modal-subtitle {
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+
+    .error-message {
+      color: var(--color-danger);
+      font-size: var(--font-size-xs);
+      margin-top: var(--space-xs);
+    }
+
+    .form-error {
+      color: var(--color-danger);
+      font-size: var(--font-size-xs);
+      margin-top: var(--space-xs);
+      display: block;
+    }
+
+    .password-input-container {
+      position: relative;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: var(--space-sm);
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: var(--space-xs);
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
-      margin-top: 1rem;
+    }
+
+    .password-toggle:hover {
+      color: var(--color-primary);
+    }
+
+    .password-toggle svg {
+      width: var(--font-size-xl);
+      height: var(--font-size-xl);
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    .checkbox {
+      width: var(--space-md);
+      height: var(--space-md);
+      margin-top: calc(var(--space-xs) / 2);
+      flex-shrink: 0;
+    }
+
+    .checkbox-label {
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      cursor: pointer;
+      line-height: var(--line-height-base);
+    }
+
+    .checkbox-label a {
+      color: var(--color-primary);
+      text-decoration: none;
+    }
+
+    .checkbox-label a:hover {
+      text-decoration: underline;
+    }
+
+    /* Button style overrides */
+    .btn {
+      width: 100%;
+      margin-bottom: 0;
+    }
+
+    .btn-primary {
+      margin-bottom: var(--space-md);
+    }
+
+    .btn-google {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+      padding: var(--space-sm) var(--space-lg);
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-medium);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-base);
     }
 
     .btn-google:hover {
-      background-color: #f9fafb;
+      background-color: var(--bg-secondary);
     }
 
     .google-icon {
-      width: 1.25rem;
-      height: 1.25rem;
+      width: var(--font-size-xl);
+      height: var(--font-size-xl);
     }
 
     .divider {
       display: flex;
       align-items: center;
-      margin: 1rem 0;
-      color: #6c757d;
-      font-size: 0.875rem;
+      margin: var(--space-md) 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
     }
 
     .divider::before,
@@ -230,22 +272,22 @@ export class RegisterModal extends LitElement {
       content: '';
       flex: 1;
       height: 1px;
-      background-color: #e5e7eb;
+      background-color: var(--border-color-light);
     }
 
     .divider span {
-      padding: 0 1rem;
+      padding: 0 var(--space-md);
     }
 
     .links {
       text-align: center;
-      margin-top: 1rem;
+      margin-top: var(--space-md);
     }
 
     .link {
-      color: #007bff;
+      color: var(--color-primary);
       text-decoration: none;
-      font-size: 0.875rem;
+      font-size: var(--font-size-sm);
     }
 
     .link:hover {
@@ -254,54 +296,69 @@ export class RegisterModal extends LitElement {
 
     .close-btn {
       position: absolute;
-      top: 1rem;
-      right: 1rem;
+      top: var(--space-md);
+      right: var(--space-md);
       background: none;
       border: none;
-      font-size: 1.5rem;
+      font-size: var(--font-size-2xl);
       cursor: pointer;
-      color: #6c757d;
-      width: 2rem;
-      height: 2rem;
+      color: var(--text-secondary);
+      width: var(--space-xl);
+      height: var(--space-xl);
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 0.25rem;
+      border-radius: var(--radius-sm);
     }
 
     .close-btn:hover {
-      background-color: #f8f9fa;
-      color: #212529;
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
     }
 
     @media (max-width: 480px) {
       .modal {
-        margin: 1rem;
-        padding: 1.5rem;
+        margin: var(--space-md);
+        padding: var(--space-lg);
         max-height: 95vh;
       }
     }
   `;
 
   render() {
-    const passwordsMatch = !this.confirmPassword || this.password === this.confirmPassword;
-    const isFormValid = this.username && this.email && this.password && this.confirmPassword && passwordsMatch && this.acceptTerms;
+    const passwordsMatch = !this.confirmPassword || doPasswordsMatch(this.password, this.confirmPassword);
+    const isFormValid = isValidUsername(this.username) && isValidEmail(this.email) && this.password && this.confirmPassword && passwordsMatch && this.acceptTerms;
+    const hasUsernameError = this.usernameTouched && !isValidUsername(this.username);
+    const hasEmailError = this.emailTouched && !isValidEmail(this.email);
+    const hasPasswordError = this.passwordTouched && this.password.length < 6;
+    const hasConfirmPasswordError = this.confirmPasswordTouched && (!passwordsMatch || this.confirmPassword.length < 6);
 
     return html`
-      <div class="modal-backdrop ${this.isOpen ? 'open' : ''}" @click=${this.handleBackdropClick}>
+      <div 
+        class="modal-backdrop ${this.isOpen ? 'open' : ''}"
+        @click=${this.handleBackdropClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="register-modal-title"
+        aria-describedby="register-modal-description"
+      >
         <div class="modal" @click=${this.stopPropagation}>
-          <button class="close-btn" @click=${this.close}>×</button>
+          <button 
+            class="close-btn" 
+            @click=${this.close}
+            aria-label="Close registration modal"
+          >×</button>
           
           <div class="modal-header">
-            <h2 class="modal-title">Create Account</h2>
-            <p class="modal-subtitle">Join us and start managing your hyperlinks efficiently</p>
+            <h2 id="register-modal-title" class="modal-title">Create Account</h2>
+            <p id="register-modal-description" class="modal-subtitle">Join us and start managing your hyperlinks efficiently</p>
           </div>
 
           <form @submit=${this.handleSubmit}>
             <div class="form-group">
               <label class="form-label" for="reg-username">Username<span class="required">*</span></label>
               <input
-                class="form-input"
+                class="form-input ${hasUsernameError ? 'error' : ''}"
                 type="text"
                 id="reg-username"
                 .value=${this.username}
@@ -310,13 +367,16 @@ export class RegisterModal extends LitElement {
                 autocomplete="off"
                 spellcheck="false"
                 required
+                aria-describedby=${hasUsernameError ? 'username-error' : ''}
+                aria-invalid=${hasUsernameError ? 'true' : 'false'}
               />
+              ${hasUsernameError ? html`<span id="username-error" class="form-error" role="alert">${ValidationMessages.INVALID_USERNAME}</span>` : ''}
             </div>
 
             <div class="form-group">
               <label class="form-label" for="reg-email">Email<span class="required">*</span></label>
               <input
-                class="form-input"
+                class="form-input ${hasEmailError ? 'error' : ''}"
                 type="email"
                 id="reg-email"
                 .value=${this.email}
@@ -325,14 +385,17 @@ export class RegisterModal extends LitElement {
                 autocomplete="off"
                 spellcheck="false"
                 required
+                aria-describedby=${hasEmailError ? 'email-error' : ''}
+                aria-invalid=${hasEmailError ? 'true' : 'false'}
               />
+              ${hasEmailError ? html`<span id="email-error" class="form-error" role="alert">${ValidationMessages.INVALID_EMAIL}</span>` : ''}
             </div>
 
             <div class="form-group">
               <label class="form-label" for="reg-password">Password<span class="required">*</span></label>
               <div class="password-input-container">
                 <input
-                  class="form-input"
+                  class="form-input ${hasPasswordError ? 'error' : ''}"
                   type=${this.showPassword ? 'text' : 'password'}
                   id="reg-password"
                   .value=${this.password}
@@ -341,6 +404,8 @@ export class RegisterModal extends LitElement {
                   autocomplete="off"
                   spellcheck="false"
                   required
+                  aria-describedby=${hasPasswordError ? 'password-error' : ''}
+                  aria-invalid=${hasPasswordError ? 'true' : 'false'}
                 />
                 <button
                   type="button"
@@ -351,13 +416,14 @@ export class RegisterModal extends LitElement {
                   ${this.showPassword ? this.eyeIcon : this.eyeOffIcon}
                 </button>
               </div>
+              ${hasPasswordError ? html`<span id="password-error" class="form-error" role="alert">Password must be at least 6 characters long</span>` : ''}
             </div>
 
             <div class="form-group">
               <label class="form-label" for="reg-confirm-password">Confirm Password<span class="required">*</span></label>
               <div class="password-input-container">
                 <input
-                  class="form-input ${!passwordsMatch ? 'error' : ''}"
+                  class="form-input ${hasConfirmPasswordError ? 'error' : ''}"
                   type=${this.showConfirmPassword ? 'text' : 'password'}
                   id="reg-confirm-password"
                   .value=${this.confirmPassword}
@@ -366,6 +432,8 @@ export class RegisterModal extends LitElement {
                   autocomplete="off"
                   spellcheck="false"
                   required
+                  aria-describedby=${hasConfirmPasswordError ? 'confirm-password-error' : ''}
+                  aria-invalid=${hasConfirmPasswordError ? 'true' : 'false'}
                 />
                 <button
                   type="button"
@@ -376,7 +444,7 @@ export class RegisterModal extends LitElement {
                   ${this.showConfirmPassword ? this.eyeIcon : this.eyeOffIcon}
                 </button>
               </div>
-              ${!passwordsMatch ? html`<div class="error-message">Passwords do not match</div>` : ''}
+              ${hasConfirmPasswordError ? html`<span id="confirm-password-error" class="form-error" role="alert">${!passwordsMatch ? ValidationMessages.PASSWORDS_DO_NOT_MATCH : 'Password must be at least 6 characters long'}</span>` : ''}
             </div>
 
                         <div class="form-group">
@@ -458,13 +526,31 @@ export class RegisterModal extends LitElement {
   }
 
   public open() {
+    // Store current focus for restoration
+    this.previousActiveElement = document.activeElement;
+    
     this.isOpen = true;
     document.addEventListener('keydown', this.handleKeyDown);
+    
+    // Focus management for accessibility
+    this.updateComplete.then(() => {
+      const firstInput = this.shadowRoot?.querySelector('#reg-username') as HTMLInputElement;
+      if (firstInput) {
+        firstInput.focus();
+      }
+    });
   }
 
   public close() {
     this.isOpen = false;
     document.removeEventListener('keydown', this.handleKeyDown);
+    
+    // Restore focus for accessibility
+    if (this.previousActiveElement && this.previousActiveElement instanceof HTMLElement) {
+      this.previousActiveElement.focus();
+    }
+    this.previousActiveElement = null;
+    
     this.resetForm();
   }
 
@@ -477,6 +563,10 @@ export class RegisterModal extends LitElement {
     this.acceptTerms = false;
     this.showPassword = false;
     this.showConfirmPassword = false;
+    this.usernameTouched = false;
+    this.emailTouched = false;
+    this.passwordTouched = false;
+    this.confirmPasswordTouched = false;
   }
 
   private handleBackdropClick(e: Event) {
@@ -497,14 +587,17 @@ export class RegisterModal extends LitElement {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
 
+
   private handleUsernameChange(e: Event) {
     const target = e.target as HTMLInputElement;
     this.username = target.value;
+    this.usernameTouched = true;
   }
 
   private handleEmailChange(e: Event) {
     const target = e.target as HTMLInputElement;
     this.email = target.value;
+    this.emailTouched = true;
   }
 
   private handleOrganisationChange(e: Event) {
@@ -515,11 +608,13 @@ export class RegisterModal extends LitElement {
   private handlePasswordChange(e: Event) {
     const target = e.target as HTMLInputElement;
     this.password = target.value;
+    this.passwordTouched = true;
   }
 
   private handleConfirmPasswordChange(e: Event) {
     const target = e.target as HTMLInputElement;
     this.confirmPassword = target.value;
+    this.confirmPasswordTouched = true;
   }
 
   private handleAcceptTermsChange(e: Event) {
@@ -530,7 +625,7 @@ export class RegisterModal extends LitElement {
   private handleSubmit(e: Event) {
     e.preventDefault();
 
-    if (this.password !== this.confirmPassword) {
+    if (!doPasswordsMatch(this.password, this.confirmPassword)) {
       console.error('Passwords do not match');
       return;
     }
@@ -564,14 +659,12 @@ export class RegisterModal extends LitElement {
 
   private handleTermsClick(e: Event) {
     e.preventDefault();
-    console.log('Terms of Service clicked');
-    // TODO: Open terms modal or navigate to terms page
+    window.open('/terms', '_blank');
   }
 
   private handlePrivacyClick(e: Event) {
     e.preventDefault();
-    console.log('Privacy Policy clicked');
-    // TODO: Open privacy modal or navigate to privacy page
+    window.open('/privacy', '_blank');
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
