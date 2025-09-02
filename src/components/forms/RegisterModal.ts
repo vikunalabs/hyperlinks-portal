@@ -6,6 +6,16 @@ import { allModalStyles } from '../../shared/styles/modal-styles';
 
 @customElement('register-modal')
 export class RegisterModal extends LitElement {
+  // Add disconnection cleanup to prevent memory leaks
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('keydown', this.handleKeyDown);
+    this.previousActiveElement = null;
+  }
+  
+  connectedCallback() {
+    super.connectedCallback();
+  }
   @state() private isOpen = false;
   @state() private showPassword = false;
   @state() private showConfirmPassword = false;
@@ -19,6 +29,8 @@ export class RegisterModal extends LitElement {
   @state() private emailTouched = false;
   @state() private passwordTouched = false;
   @state() private confirmPasswordTouched = false;
+  @state() private isLoading = false;
+  @state() private error = '';
   
   private previousActiveElement: Element | null = null;
 
@@ -98,12 +110,14 @@ export class RegisterModal extends LitElement {
   ];
 
   render() {
+    const trimmedUsername = this.username.trim();
+    const trimmedEmail = this.email.trim();
     const passwordsMatch = !this.confirmPassword || doPasswordsMatch(this.password, this.confirmPassword);
-    const isFormValid = isValidUsername(this.username) && isValidEmail(this.email) && this.password && this.confirmPassword && passwordsMatch && this.acceptTerms;
-    const hasUsernameError = this.usernameTouched && !isValidUsername(this.username);
-    const hasEmailError = this.emailTouched && !isValidEmail(this.email);
-    const hasPasswordError = this.passwordTouched && this.password.length < 6;
-    const hasConfirmPasswordError = this.confirmPasswordTouched && (!passwordsMatch || this.confirmPassword.length < 6);
+    const isFormValid = isValidUsername(trimmedUsername) && isValidEmail(trimmedEmail) && this.password.length >= 6 && this.confirmPassword.length >= 6 && passwordsMatch && this.acceptTerms && !this.isLoading;
+    const hasUsernameError = this.usernameTouched && (!trimmedUsername || !isValidUsername(trimmedUsername));
+    const hasEmailError = this.emailTouched && (!trimmedEmail || !isValidEmail(trimmedEmail));
+    const hasPasswordError = this.passwordTouched && (!this.password || this.password.length < 6);
+    const hasConfirmPasswordError = this.confirmPasswordTouched && (!passwordsMatch || !this.confirmPassword || this.confirmPassword.length < 6);
 
     return html`
       <div 
@@ -125,6 +139,12 @@ export class RegisterModal extends LitElement {
             <h2 id="register-modal-title" class="modal-title">Create Account</h2>
             <p id="register-modal-description" class="modal-subtitle">Join us and start managing your hyperlinks efficiently</p>
           </div>
+
+          ${this.error ? html`
+            <div class="form-error" style="text-align: center; margin-bottom: var(--space-lg);">
+              ${this.error}
+            </div>
+          ` : ''}
 
           <form @submit=${this.handleSubmit}>
             <div class="form-group">
@@ -172,7 +192,7 @@ export class RegisterModal extends LitElement {
                   id="reg-password"
                   .value=${this.password}
                   @input=${this.handlePasswordChange}
-                  placeholder="********"
+                  placeholder="●●●●●●●●"
                   autocomplete="off"
                   spellcheck="false"
                   required
@@ -200,7 +220,7 @@ export class RegisterModal extends LitElement {
                   id="reg-confirm-password"
                   .value=${this.confirmPassword}
                   @input=${this.handleConfirmPasswordChange}
-                  placeholder="********"
+                  placeholder="●●●●●●●●"
                   autocomplete="off"
                   spellcheck="false"
                   required
@@ -247,8 +267,8 @@ export class RegisterModal extends LitElement {
               </label>
             </div>
 
-            <button type="submit" class="btn btn-primary" ?disabled=${!isFormValid}>
-              Create Account
+            <button type="submit" class="btn btn-primary" ?disabled=${!isFormValid || this.isLoading}>
+              ${this.isLoading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
 
@@ -256,7 +276,7 @@ export class RegisterModal extends LitElement {
             <span>Or continue with</span>
           </div>
 
-          <button class="btn btn-google" @click=${this.handleGoogleSignup}>
+          <button class="btn btn-google" @click=${this.handleGoogleSignup} ?disabled=${this.isLoading}>
             ${this.googleIcon}
             Sign up with Google
           </button>
@@ -289,32 +309,49 @@ export class RegisterModal extends LitElement {
   }
 
   public open() {
-    // Store current focus for restoration
-    this.previousActiveElement = document.activeElement;
+    // Prevent multiple opens
+    if (this.isOpen) return;
     
+    this.previousActiveElement = document.activeElement as Element;
     this.isOpen = true;
+    this.error = '';
+    
+    // Add keyboard listener only once
     document.addEventListener('keydown', this.handleKeyDown);
     
-    // Focus management for accessibility
+    // Focus management for accessibility - use updateComplete for reliability
     this.updateComplete.then(() => {
       const firstInput = this.shadowRoot?.querySelector('#reg-username') as HTMLInputElement;
-      if (firstInput) {
+      if (firstInput && !this.isLoading) {
         firstInput.focus();
       }
     });
   }
 
   public close() {
+    // Prevent multiple closes
+    if (!this.isOpen) return;
+    
     this.isOpen = false;
+    
+    // Always remove event listener to prevent memory leaks
     document.removeEventListener('keydown', this.handleKeyDown);
     
-    // Restore focus for accessibility
-    if (this.previousActiveElement && this.previousActiveElement instanceof HTMLElement) {
-      this.previousActiveElement.focus();
+    // Reset form state
+    this.resetForm();
+    
+    // Restore focus safely
+    if (this.previousActiveElement) {
+      try {
+        if ('focus' in this.previousActiveElement && typeof this.previousActiveElement.focus === 'function') {
+          (this.previousActiveElement as HTMLElement).focus();
+        }
+      } catch (error) {
+        // Silently handle focus restoration errors
+        console.debug('Focus restoration failed:', error);
+      }
     }
     this.previousActiveElement = null;
-    
-    this.resetForm();
   }
 
   private resetForm() {
@@ -330,6 +367,8 @@ export class RegisterModal extends LitElement {
     this.emailTouched = false;
     this.passwordTouched = false;
     this.confirmPasswordTouched = false;
+    this.isLoading = false;
+    this.error = '';
   }
 
   private handleBackdropClick(e: Event) {
@@ -353,60 +392,178 @@ export class RegisterModal extends LitElement {
 
   private handleUsernameChange(e: Event) {
     const target = e.target as HTMLInputElement;
-    this.username = target.value;
+    if (!target) return;
+    
+    this.username = target.value.trim();
     this.usernameTouched = true;
+    
+    // Clear errors on input for better UX
+    if (this.error) this.error = '';
+    
+    // Clear username validation error when user starts typing valid input
+    if (this.usernameTouched && this.username && isValidUsername(this.username)) {
+      this.usernameTouched = false;
+    }
   }
 
   private handleEmailChange(e: Event) {
     const target = e.target as HTMLInputElement;
-    this.email = target.value;
+    if (!target) return;
+    
+    this.email = target.value.trim();
     this.emailTouched = true;
+    
+    // Clear errors on input for better UX
+    if (this.error) this.error = '';
+    
+    // Clear email validation error when user starts typing valid input
+    if (this.emailTouched && this.email && isValidEmail(this.email)) {
+      this.emailTouched = false;
+    }
   }
 
   private handleOrganisationChange(e: Event) {
     const target = e.target as HTMLInputElement;
-    this.organisation = target.value;
+    if (!target) return;
+    
+    this.organisation = target.value.trim();
   }
 
   private handlePasswordChange(e: Event) {
     const target = e.target as HTMLInputElement;
+    if (!target) return;
+    
     this.password = target.value;
     this.passwordTouched = true;
+    
+    // Clear errors on input for better UX
+    if (this.error) this.error = '';
+    
+    // Clear password validation error when user starts typing valid input
+    if (this.passwordTouched && this.password.length >= 6) {
+      this.passwordTouched = false;
+    }
   }
 
   private handleConfirmPasswordChange(e: Event) {
     const target = e.target as HTMLInputElement;
+    if (!target) return;
+    
     this.confirmPassword = target.value;
     this.confirmPasswordTouched = true;
+    
+    // Clear errors on input for better UX
+    if (this.error) this.error = '';
+    
+    // Clear confirm password validation error when passwords match
+    if (this.confirmPasswordTouched && this.confirmPassword.length >= 6 && doPasswordsMatch(this.password, this.confirmPassword)) {
+      this.confirmPasswordTouched = false;
+    }
   }
 
   private handleAcceptTermsChange(e: Event) {
     const target = e.target as HTMLInputElement;
+    if (!target) return;
+    
     this.acceptTerms = target.checked;
   }
 
-  private handleSubmit(e: Event) {
+  private async handleSubmit(e: Event) {
     e.preventDefault();
-
+    
+    // Prevent double submission
+    if (this.isLoading) return;
+    
+    // Validate inputs
+    const trimmedUsername = this.username.trim();
+    const trimmedEmail = this.email.trim();
+    const trimmedOrganisation = this.organisation.trim();
+    
+    // Mark all fields as touched for validation
+    this.usernameTouched = true;
+    this.emailTouched = true;
+    this.passwordTouched = true;
+    this.confirmPasswordTouched = true;
+    
+    // Validate all required fields
+    if (!trimmedUsername || !isValidUsername(trimmedUsername)) {
+      this.username = trimmedUsername;
+      return;
+    }
+    
+    if (!trimmedEmail || !isValidEmail(trimmedEmail)) {
+      this.email = trimmedEmail;
+      return;
+    }
+    
+    if (!this.password || this.password.length < 6) {
+      return;
+    }
+    
+    if (!this.confirmPassword || this.confirmPassword.length < 6) {
+      return;
+    }
+    
     if (!doPasswordsMatch(this.password, this.confirmPassword)) {
-      console.error('Passwords do not match');
+      this.error = 'Passwords do not match';
+      return;
+    }
+    
+    if (!this.acceptTerms) {
+      this.error = 'Please accept the Terms of Service and Privacy Policy';
       return;
     }
 
-    console.log('Register form submitted:', {
-      username: this.username,
-      email: this.email,
-      organisation: this.organisation,
-      password: this.password,
-      acceptTerms: this.acceptTerms
-    });
+    this.isLoading = true;
+    this.error = '';
 
-    // TODO: Implement actual registration logic
-    this.close();
+    try {
+      // TODO: Replace with actual registration service call
+      console.log('Register form submitted:', {
+        username: trimmedUsername,
+        email: trimmedEmail,
+        organisation: trimmedOrganisation,
+        password: this.password,
+        acceptTerms: this.acceptTerms
+      });
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Successful registration - close modal and dispatch event
+      this.close();
+      this.dispatchEvent(new CustomEvent('register-success', { bubbles: true, composed: true }));
+      
+    } catch (error) {
+      // Handle different error types
+      if (error instanceof Error) {
+        this.error = error.message;
+      } else if (typeof error === 'string') {
+        this.error = error;
+      } else {
+        this.error = 'Registration failed. Please try again.';
+      }
+      
+      // Focus back on first input field for retry
+      this.updateComplete.then(() => {
+        const firstInput = this.shadowRoot?.querySelector('#reg-username') as HTMLInputElement;
+        firstInput?.focus();
+      });
+    } finally {
+      this.isLoading = false;
+    }
   }
 
-  private handleGoogleSignup() {
+  private handleGoogleSignup(event: Event) {
+    // Prevent any default behavior that might trigger validation
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Prevent Google signup during form submission
+    if (this.isLoading) return;
+    
     // Clear any existing form errors when using Google sign-up
+    this.error = '';
     this.usernameTouched = false;
     this.emailTouched = false;
     this.passwordTouched = false;
@@ -419,7 +576,18 @@ export class RegisterModal extends LitElement {
 
   private handleLoginClick(e: Event) {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear any form errors when navigating to login
+    this.error = '';
+    this.usernameTouched = false;
+    this.emailTouched = false;
+    this.passwordTouched = false;
+    this.confirmPasswordTouched = false;
+    
+    // Close this modal first to prevent any further validation
     this.close();
+    
     // Dispatch custom event to open login modal
     this.dispatchEvent(new CustomEvent('open-login-modal', {
       bubbles: true,
@@ -438,8 +606,27 @@ export class RegisterModal extends LitElement {
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && this.isOpen) {
+    // Only handle keys when modal is open
+    if (!this.isOpen) return;
+    
+    if (e.key === 'Escape') {
+      e.preventDefault();
       this.close();
+    }
+    
+    // Handle Enter key for form submission when not in loading state
+    if (e.key === 'Enter' && !this.isLoading) {
+      const activeElement = this.shadowRoot?.activeElement;
+      // Don't auto-submit if user is focused on a button or link
+      if (activeElement?.tagName !== 'BUTTON' && activeElement?.tagName !== 'A') {
+        const trimmedUsername = this.username.trim();
+        const trimmedEmail = this.email.trim();
+        const passwordsMatch = doPasswordsMatch(this.password, this.confirmPassword);
+        const isFormValid = isValidUsername(trimmedUsername) && isValidEmail(trimmedEmail) && this.password.length >= 6 && this.confirmPassword.length >= 6 && passwordsMatch && this.acceptTerms;
+        if (isFormValid) {
+          this.handleSubmit(e);
+        }
+      }
     }
   }
 }

@@ -7,6 +7,16 @@ import { allModalStyles } from '../../shared/styles/modal-styles';
 
 @customElement('login-modal')
 export class LoginModal extends LitElement {
+  // Add disconnection cleanup to prevent memory leaks
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('keydown', this.handleKeyDown);
+    this.previousActiveElement = null;
+  }
+  
+  connectedCallback() {
+    super.connectedCallback();
+  }
   @state() private isOpen = false;
   @state() private showPassword = false;
   @state() private username = '';
@@ -91,9 +101,10 @@ export class LoginModal extends LitElement {
   ];
 
   render() {
-    const isFormValid = isValidUsernameOrEmail(this.username) && this.password.length >= 6;
-    const hasUsernameError = this.usernameTouched && !isValidUsernameOrEmail(this.username);
-    const hasPasswordError = this.passwordTouched && this.password.length < 6;
+    const trimmedUsername = this.username.trim();
+    const isFormValid = isValidUsernameOrEmail(trimmedUsername) && this.password.length >= 6;
+    const hasUsernameError = this.usernameTouched && (!trimmedUsername || !isValidUsernameOrEmail(trimmedUsername));
+    const hasPasswordError = this.passwordTouched && (!this.password || this.password.length < 6);
     
     return html`
       <div class="modal-backdrop ${this.isOpen ? 'open' : ''}" @click=${this.handleBackdropClick}>
@@ -124,7 +135,7 @@ export class LoginModal extends LitElement {
                 @input=${this.handleUsernameInput}
                 @blur=${this.handleUsernameBlur}
                 ?disabled=${this.isLoading}
-                placeholder="Enter your email or username"
+                placeholder="john.doe@example.com"
                 autocomplete="username"
                 aria-describedby=${hasUsernameError ? 'username-error' : ''}
                 aria-invalid=${hasUsernameError}
@@ -145,7 +156,7 @@ export class LoginModal extends LitElement {
                   @input=${this.handlePasswordInput}
                   @blur=${this.handlePasswordBlur}
                   ?disabled=${this.isLoading}
-                  placeholder="Enter your password"
+                  placeholder="●●●●●●●●"
                   autocomplete="current-password"
                   aria-describedby=${hasPasswordError ? 'password-error' : ''}
                   aria-invalid=${hasPasswordError}
@@ -156,7 +167,7 @@ export class LoginModal extends LitElement {
                   @click=${this.togglePasswordVisibility}
                   aria-label=${this.showPassword ? 'Hide password' : 'Show password'}
                 >
-                  ${this.showPassword ? this.eyeOffIcon : this.eyeIcon}
+                  ${this.showPassword ? this.eyeIcon : this.eyeOffIcon}
                 </button>
               </div>
               ${hasPasswordError ? html`
@@ -193,7 +204,7 @@ export class LoginModal extends LitElement {
           </form>
 
           <div class="divider">
-            <span>or</span>
+            <span>Or continue with</span>
           </div>
 
           <button class="btn btn-google" @click=${this.handleGoogleLogin} ?disabled=${this.isLoading}>
@@ -229,25 +240,49 @@ export class LoginModal extends LitElement {
   }
 
   public open() {
+    // Prevent multiple opens
+    if (this.isOpen) return;
+    
     this.previousActiveElement = document.activeElement as Element;
     this.isOpen = true;
     this.error = '';
     
-    // Focus management for accessibility
-    setTimeout(() => {
+    // Add keyboard listener only once
+    document.addEventListener('keydown', this.handleKeyDown);
+    
+    // Focus management for accessibility - use updateComplete for reliability
+    this.updateComplete.then(() => {
       const usernameInput = this.shadowRoot?.querySelector('#username') as HTMLInputElement;
-      usernameInput?.focus();
-    }, 100);
+      if (usernameInput && !this.isLoading) {
+        usernameInput.focus();
+      }
+    });
   }
 
   public close() {
+    // Prevent multiple closes
+    if (!this.isOpen) return;
+    
     this.isOpen = false;
+    
+    // Always remove event listener to prevent memory leaks
+    document.removeEventListener('keydown', this.handleKeyDown);
+    
+    // Reset form state
     this.resetForm();
     
-    // Restore focus
-    if (this.previousActiveElement && 'focus' in this.previousActiveElement) {
-      (this.previousActiveElement as HTMLElement).focus();
+    // Restore focus safely
+    if (this.previousActiveElement) {
+      try {
+        if ('focus' in this.previousActiveElement && typeof this.previousActiveElement.focus === 'function') {
+          (this.previousActiveElement as HTMLElement).focus();
+        }
+      } catch (error) {
+        // Silently handle focus restoration errors
+        console.debug('Focus restoration failed:', error);
+      }
     }
+    this.previousActiveElement = null;
   }
 
   private resetForm() {
@@ -273,8 +308,17 @@ export class LoginModal extends LitElement {
 
   private handleUsernameInput(event: Event) {
     const input = event.target as HTMLInputElement;
-    this.username = input.value;
+    if (!input) return;
+    
+    this.username = input.value.trim();
+    
+    // Clear errors on input for better UX
     if (this.error) this.error = '';
+    
+    // Clear username validation error when user starts typing valid input
+    if (this.usernameTouched && this.username && isValidUsernameOrEmail(this.username)) {
+      this.usernameTouched = false;
+    }
   }
 
   private handleUsernameBlur() {
@@ -283,8 +327,17 @@ export class LoginModal extends LitElement {
 
   private handlePasswordInput(event: Event) {
     const input = event.target as HTMLInputElement;
+    if (!input) return;
+    
     this.password = input.value;
+    
+    // Clear errors on input for better UX
     if (this.error) this.error = '';
+    
+    // Clear password validation error when user starts typing valid input
+    if (this.passwordTouched && this.password.length >= 6) {
+      this.passwordTouched = false;
+    }
   }
 
   private handlePasswordBlur() {
@@ -293,6 +346,8 @@ export class LoginModal extends LitElement {
 
   private handleRememberMeChange(event: Event) {
     const checkbox = event.target as HTMLInputElement;
+    if (!checkbox) return;
+    
     this.rememberMe = checkbox.checked;
   }
 
@@ -303,8 +358,18 @@ export class LoginModal extends LitElement {
   private async handleSubmit(event: Event) {
     event.preventDefault();
     
-    if (!isValidUsernameOrEmail(this.username) || this.password.length < 6) {
+    // Prevent double submission
+    if (this.isLoading) return;
+    
+    // Validate inputs
+    const trimmedUsername = this.username.trim();
+    if (!trimmedUsername || !isValidUsernameOrEmail(trimmedUsername)) {
       this.usernameTouched = true;
+      this.username = trimmedUsername; // Update with trimmed value
+      return;
+    }
+    
+    if (!this.password || this.password.length < 6) {
       this.passwordTouched = true;
       return;
     }
@@ -314,21 +379,43 @@ export class LoginModal extends LitElement {
 
     try {
       await authService.login({
-        usernameOrEmail: this.username,
+        usernameOrEmail: trimmedUsername,
         password: this.password,
         rememberMe: this.rememberMe
       });
       
+      // Successful login - close modal and dispatch event
       this.close();
       this.dispatchEvent(new CustomEvent('login-success', { bubbles: true, composed: true }));
+      
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Login failed. Please try again.';
+      // Handle different error types
+      if (error instanceof Error) {
+        this.error = error.message;
+      } else if (typeof error === 'string') {
+        this.error = error;
+      } else {
+        this.error = 'Login failed. Please check your credentials and try again.';
+      }
+      
+      // Focus back on username field for retry
+      this.updateComplete.then(() => {
+        const usernameInput = this.shadowRoot?.querySelector('#username') as HTMLInputElement;
+        usernameInput?.focus();
+      });
     } finally {
       this.isLoading = false;
     }
   }
 
-  private handleGoogleLogin() {
+  private handleGoogleLogin(event: Event) {
+    // Prevent any default behavior that might trigger validation
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Prevent Google login during form submission
+    if (this.isLoading) return;
+    
     // Clear any existing form errors when using Google sign-in
     this.error = '';
     this.usernameTouched = false;
@@ -339,11 +426,53 @@ export class LoginModal extends LitElement {
 
   private handleForgotPasswordClick(event: Event) {
     event.preventDefault();
+    event.stopPropagation();
+    
+    // Clear any form errors when navigating to forgot password
+    this.error = '';
+    this.usernameTouched = false;
+    this.passwordTouched = false;
+    
+    // Close this modal first to prevent any further validation
+    this.close();
+    
     this.dispatchEvent(new CustomEvent('forgot-password', { bubbles: true, composed: true }));
   }
 
   private handleRegisterClick(event: Event) {
     event.preventDefault();
+    event.stopPropagation();
+    
+    // Clear any form errors IMMEDIATELY when navigating to register
+    this.error = '';
+    this.usernameTouched = false;
+    this.passwordTouched = false;
+    
+    // Close this modal first to prevent any further validation
+    this.close();
+    
     this.dispatchEvent(new CustomEvent('show-register', { bubbles: true, composed: true }));
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    // Only handle keys when modal is open
+    if (!this.isOpen) return;
+    
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      this.close();
+    }
+    
+    // Handle Enter key for form submission when not in loading state
+    if (e.key === 'Enter' && !this.isLoading) {
+      const activeElement = this.shadowRoot?.activeElement;
+      // Don't auto-submit if user is focused on a button or link
+      if (activeElement?.tagName !== 'BUTTON' && activeElement?.tagName !== 'A') {
+        const isFormValid = isValidUsernameOrEmail(this.username.trim()) && this.password.length >= 6;
+        if (isFormValid) {
+          this.handleSubmit(e);
+        }
+      }
+    }
   }
 }

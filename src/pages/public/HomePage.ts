@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, query } from 'lit/decorators.js';
+import { authService } from '../../services/auth.service';
 import '../../components/forms/LoginModal';
 import '../../components/forms/RegisterModal';
 import '../../components/forms/ForgotPasswordModal';
@@ -160,7 +161,7 @@ export class HomePage extends LitElement {
       <nav class="navbar">
         <h1 class="navbar-title">Hyperlinks Management Platform</h1>
         <div class="navbar-buttons">
-          <button class="btn btn-secondary" @click=${this.navigateToLogin}>Login</button>
+          <button class="btn btn-secondary" @click=${this.navigateToLogin}>Sign In</button>
           <button class="btn btn-primary" @click=${this.navigateToRegister}>Get Started</button>
         </div>
       </nav>
@@ -172,8 +173,8 @@ export class HomePage extends LitElement {
         </div>
       </div>
       
-      <login-modal @open-register-modal=${this.handleOpenRegisterModal} @open-forgot-password-modal=${this.handleOpenForgotPasswordModal}></login-modal>
-      <register-modal @open-login-modal=${this.handleOpenLoginModal}></register-modal>
+      <login-modal @open-register-modal=${this.handleOpenRegisterModal} @forgot-password=${this.handleOpenForgotPasswordModal} @show-register=${this.handleOpenRegisterModal} @google-login=${this.handleGoogleLogin}></login-modal>
+      <register-modal @open-login-modal=${this.handleOpenLoginModal} @google-signup=${this.handleGoogleSignup}></register-modal>
       <forgot-password-modal @open-login-modal=${this.handleOpenLoginModal}></forgot-password-modal>
     `;
   }
@@ -196,5 +197,14 @@ export class HomePage extends LitElement {
 
   private handleOpenForgotPasswordModal() {
     this.forgotPasswordModal?.open();
+  }
+
+  private handleGoogleLogin() {
+    authService.initiateGoogleLogin();
+  }
+
+  private handleGoogleSignup() {
+    // Both login and signup use the same Google OAuth flow
+    authService.initiateGoogleLogin();
   }
 }

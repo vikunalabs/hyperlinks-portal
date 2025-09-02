@@ -1,235 +1,64 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { allModalStyles } from '../../shared/styles/modal-styles';
+import { isValidEmail, ValidationMessages } from '../../utils';
 
 @customElement('forgot-password-modal')
 export class ForgotPasswordModal extends LitElement {
+  // Add disconnection cleanup to prevent memory leaks
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('keydown', this.handleKeyDown);
+    this.previousActiveElement = null;
+  }
+  
+  connectedCallback() {
+    super.connectedCallback();
+  }
   @state() private isOpen = false;
   @state() private email = '';
   @state() private isSubmitted = false;
   @state() private emailTouched = false;
+  @state() private isLoading = false;
+  @state() private error = '';
   
   private previousActiveElement: Element | null = null;
 
-  static styles = css`
-    .modal-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: var(--bg-overlay);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: var(--z-modal-backdrop);
-      opacity: 0;
-      visibility: hidden;
-      transition: all var(--transition-slow);
-    }
-
-    .modal-backdrop.open {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .modal {
-      background: var(--bg-primary);
-      border-radius: var(--radius-lg);
-      padding: var(--space-xl);
-      width: 100%;
-      max-width: 400px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: var(--shadow-xl);
-      transform: scale(0.9);
-      transition: transform var(--transition-slow);
-      z-index: var(--z-modal);
-    }
-
-    .modal-backdrop.open .modal {
-      transform: scale(1);
-    }
-
-    .form-group {
-      margin-bottom: var(--space-lg);
-    }
-
-    .form-label {
-      display: block;
-      font-size: var(--font-size-sm);
-      font-weight: var(--font-weight-medium);
-      color: var(--text-primary);
-      margin-bottom: var(--space-sm);
-    }
-
-    .form-label .required {
-      color: var(--color-danger);
-      margin-left: var(--space-xs);
-    }
-
-    .form-input {
-      width: 100%;
-      padding: var(--space-sm) var(--space-md);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      font-size: var(--font-size-md);
-      transition: border-color var(--transition-base), box-shadow var(--transition-base);
-      box-sizing: border-box;
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-    }
-
-    .form-input:focus {
-      outline: none;
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px var(--color-primary-light);
-    }
-
-    .form-input.error {
-      border-color: var(--color-danger);
-    }
-
-    .form-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .btn {
-      padding: var(--space-sm) var(--space-lg);
-      font-size: var(--font-size-md);
-      font-weight: var(--font-weight-medium);
-      border: 2px solid transparent;
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: all var(--transition-base);
-      text-decoration: none;
-      display: inline-block;
-      min-width: 120px;
-      text-align: center;
-      line-height: var(--line-height-base);
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background-color: var(--color-primary);
-      color: var(--text-inverse);
-      border-color: var(--color-primary);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background-color: var(--color-primary-hover);
-      border-color: var(--color-primary-hover);
-      transform: translateY(-1px);
-    }
-
-    .modal-header {
-      text-align: center;
-      margin-bottom: var(--space-lg);
-    }
-
-    .modal-title {
-      font-size: var(--font-size-2xl);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-      margin: 0 0 var(--space-sm) 0;
-    }
-
-    .modal-subtitle {
-      color: var(--text-secondary);
-      font-size: var(--font-size-sm);
-      line-height: var(--line-height-base);
-    }
-
-    .form-error {
-      color: var(--color-danger);
-      font-size: var(--font-size-xs);
-      margin-top: var(--space-xs);
-      display: block;
-    }
-
-    /* Button style overrides */
-    .btn {
-      width: 100%;
-      margin-bottom: 0;
-    }
-
-    .btn-primary {
-      margin-bottom: var(--space-md);
-    }
-
-    .links {
-      text-align: center;
-      margin-top: var(--space-md);
-    }
-
-    .link {
-      color: var(--color-primary);
-      text-decoration: none;
-      font-size: var(--font-size-sm);
-    }
-
-    .link:hover {
-      text-decoration: underline;
-    }
-
-    .close-btn {
-      position: absolute;
-      top: var(--space-md);
-      right: var(--space-md);
-      background: none;
-      border: none;
-      font-size: var(--font-size-2xl);
-      cursor: pointer;
-      color: var(--text-secondary);
-      width: var(--space-xl);
-      height: var(--space-xl);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: var(--radius-sm);
-    }
-
-    .close-btn:hover {
-      background-color: var(--bg-secondary);
-      color: var(--text-primary);
-    }
-
-    .success-message {
-      text-align: center;
-      padding: var(--space-md) 0;
-    }
-
-    .success-icon {
-      width: var(--space-3xl);
-      height: var(--space-3xl);
-      margin: 0 auto var(--space-md);
-      color: var(--color-success);
-    }
-
-    .success-title {
-      font-size: var(--font-size-xl);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-      margin-bottom: var(--space-sm);
-    }
-
-    .success-text {
-      color: var(--text-secondary);
-      font-size: var(--font-size-sm);
-      line-height: var(--line-height-base);
-      margin-bottom: var(--space-lg);
-    }
-
-    @media (max-width: 480px) {
+  static styles = [
+    ...allModalStyles,
+    css`
+      /* ForgotPasswordModal specific styles only */
       .modal {
-        margin: var(--space-md);
-        padding: var(--space-lg);
+        max-width: 400px; /* Small modal size for forgot password */
       }
-    }
-  `;
+
+      .success-message {
+        text-align: center;
+        padding: var(--space-md) 0;
+      }
+
+      .success-icon {
+        width: var(--space-3xl);
+        height: var(--space-3xl);
+        margin: 0 auto var(--space-md);
+        color: var(--color-success);
+      }
+
+      .success-title {
+        font-size: var(--font-size-xl);
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+        margin-bottom: var(--space-sm);
+      }
+
+      .success-text {
+        color: var(--text-secondary);
+        font-size: var(--font-size-sm);
+        line-height: var(--line-height-base);
+        margin-bottom: var(--space-lg);
+      }
+    `
+  ];
 
   render() {
     return html`
@@ -255,14 +84,21 @@ export class ForgotPasswordModal extends LitElement {
   }
 
   private renderForm() {
-    const isFormValid = this.email && this.email.includes('@');
-    const hasEmailError = this.emailTouched && (!this.email || !this.email.includes('@'));
+    const trimmedEmail = this.email.trim();
+    const isFormValid = isValidEmail(trimmedEmail) && !this.isLoading;
+    const hasEmailError = this.emailTouched && (!trimmedEmail || !isValidEmail(trimmedEmail));
 
     return html`
       <div class="modal-header">
         <h2 id="forgot-password-modal-title" class="modal-title">Reset Password</h2>
         <p id="forgot-password-modal-description" class="modal-subtitle">Enter your email address and we'll send you a link to reset your password</p>
       </div>
+
+      ${this.error ? html`
+        <div class="form-error" style="text-align: center; margin-bottom: var(--space-lg);">
+          ${this.error}
+        </div>
+      ` : ''}
 
       <form @submit=${this.handleSubmit}>
         <div class="form-group">
@@ -280,11 +116,11 @@ export class ForgotPasswordModal extends LitElement {
             aria-describedby=${hasEmailError ? 'reset-email-error' : ''}
             aria-invalid=${hasEmailError ? 'true' : 'false'}
           />
-          ${hasEmailError ? html`<span id="reset-email-error" class="form-error" role="alert">Please enter a valid email address</span>` : ''}
+          ${hasEmailError ? html`<span id="reset-email-error" class="form-error" role="alert">${ValidationMessages.INVALID_EMAIL}</span>` : ''}
         </div>
 
-        <button type="submit" class="btn btn-primary" ?disabled=${!isFormValid}>
-          Send Reset Link
+        <button type="submit" class="btn btn-primary" ?disabled=${!isFormValid || this.isLoading} style="width: 100%;">
+          ${this.isLoading ? 'Sending Reset Email...' : 'Send Password Reset'}
         </button>
       </form>
 
@@ -309,7 +145,7 @@ export class ForgotPasswordModal extends LitElement {
           <strong>${this.email}</strong>
         </p>
         
-        <button class="btn btn-primary" @click=${this.handleBackToLoginClick}>
+        <button class="btn btn-primary" @click=${this.handleBackToLoginClick} style="width: 100%;">
           Back to Sign In
         </button>
       </div>
@@ -317,38 +153,57 @@ export class ForgotPasswordModal extends LitElement {
   }
 
   public open() {
-    // Store current focus for restoration
-    this.previousActiveElement = document.activeElement;
+    // Prevent multiple opens
+    if (this.isOpen) return;
     
+    this.previousActiveElement = document.activeElement as Element;
     this.isOpen = true;
+    this.error = '';
+    
+    // Add keyboard listener only once
     document.addEventListener('keydown', this.handleKeyDown);
     
-    // Focus management for accessibility
+    // Focus management for accessibility - use updateComplete for reliability
     this.updateComplete.then(() => {
       const firstInput = this.shadowRoot?.querySelector('#reset-email') as HTMLInputElement;
-      if (firstInput) {
+      if (firstInput && !this.isLoading) {
         firstInput.focus();
       }
     });
   }
 
   public close() {
+    // Prevent multiple closes
+    if (!this.isOpen) return;
+    
     this.isOpen = false;
+    
+    // Always remove event listener to prevent memory leaks
     document.removeEventListener('keydown', this.handleKeyDown);
     
-    // Restore focus for accessibility
-    if (this.previousActiveElement && this.previousActiveElement instanceof HTMLElement) {
-      this.previousActiveElement.focus();
+    // Reset form state
+    this.resetForm();
+    
+    // Restore focus safely
+    if (this.previousActiveElement) {
+      try {
+        if ('focus' in this.previousActiveElement && typeof this.previousActiveElement.focus === 'function') {
+          (this.previousActiveElement as HTMLElement).focus();
+        }
+      } catch (error) {
+        // Silently handle focus restoration errors
+        console.debug('Focus restoration failed:', error);
+      }
     }
     this.previousActiveElement = null;
-    
-    this.resetForm();
   }
 
   private resetForm() {
     this.email = '';
     this.isSubmitted = false;
     this.emailTouched = false;
+    this.isLoading = false;
+    this.error = '';
   }
 
   private handleBackdropClick(e: Event) {
@@ -363,30 +218,79 @@ export class ForgotPasswordModal extends LitElement {
 
   private handleEmailChange(e: Event) {
     const target = e.target as HTMLInputElement;
-    this.email = target.value;
+    if (!target) return;
+    
+    this.email = target.value.trim();
     this.emailTouched = true;
+    
+    // Clear errors on input for better UX
+    if (this.error) this.error = '';
+    
+    // Clear email validation error when user starts typing valid input
+    if (this.emailTouched && this.email && isValidEmail(this.email)) {
+      this.emailTouched = false;
+    }
   }
 
-  private handleSubmit(e: Event) {
+  private async handleSubmit(e: Event) {
     e.preventDefault();
     
-    if (!this.email || !this.email.includes('@')) {
-      console.error('Please enter a valid email address');
+    // Prevent double submission
+    if (this.isLoading) return;
+    
+    // Validate email
+    const trimmedEmail = this.email.trim();
+    if (!trimmedEmail || !isValidEmail(trimmedEmail)) {
+      this.emailTouched = true;
+      this.email = trimmedEmail;
       return;
     }
 
-    console.log('Forgot password submitted for:', this.email);
-    
-    // Show success message
-    this.isSubmitted = true;
-    
-    // TODO: Implement actual forgot password logic
-    // Call API to send reset email
+    this.isLoading = true;
+    this.error = '';
+
+    try {
+      // TODO: Replace with actual forgot password service call
+      console.log('Forgot password submitted for:', trimmedEmail);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Show success message
+      this.isSubmitted = true;
+      this.email = trimmedEmail; // Update with trimmed value
+      
+    } catch (error) {
+      // Handle different error types
+      if (error instanceof Error) {
+        this.error = error.message;
+      } else if (typeof error === 'string') {
+        this.error = error;
+      } else {
+        this.error = 'Failed to send reset email. Please try again.';
+      }
+      
+      // Focus back on email field for retry
+      this.updateComplete.then(() => {
+        const emailInput = this.shadowRoot?.querySelector('#reset-email') as HTMLInputElement;
+        emailInput?.focus();
+      });
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   private handleBackToLoginClick(e: Event) {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear any form errors when navigating to login
+    this.error = '';
+    this.emailTouched = false;
+    
+    // Close this modal first to prevent any further validation
     this.close();
+    
     // Dispatch custom event to open login modal
     this.dispatchEvent(new CustomEvent('open-login-modal', { 
       bubbles: true,
@@ -395,8 +299,25 @@ export class ForgotPasswordModal extends LitElement {
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && this.isOpen) {
+    // Only handle keys when modal is open
+    if (!this.isOpen) return;
+    
+    if (e.key === 'Escape') {
+      e.preventDefault();
       this.close();
+    }
+    
+    // Handle Enter key for form submission when not in loading state
+    if (e.key === 'Enter' && !this.isLoading && !this.isSubmitted) {
+      const activeElement = this.shadowRoot?.activeElement;
+      // Don't auto-submit if user is focused on a button or link
+      if (activeElement?.tagName !== 'BUTTON' && activeElement?.tagName !== 'A') {
+        const trimmedEmail = this.email.trim();
+        const isFormValid = isValidEmail(trimmedEmail);
+        if (isFormValid) {
+          this.handleSubmit(e);
+        }
+      }
     }
   }
 }

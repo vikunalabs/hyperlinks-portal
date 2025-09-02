@@ -1,5 +1,7 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement, state, query } from 'lit/decorators.js';
+import '../../components/modals/ConfirmationModal';
+import type { ConfirmationModal } from '../../components/modals/ConfirmationModal';
 
 interface LinkFormData {
   title: string;
@@ -36,6 +38,57 @@ export class MyLinksPage extends LitElement {
   @state() private filterBy = 'all';
   @state() private currentPage = 1;
   @state() private itemsPerPage = 10;
+  
+  @query('confirmation-modal') private confirmationModal!: ConfirmationModal;
+
+  connectedCallback() {
+    super.connectedCallback();
+    // Add some sample data for testing
+    this.initSampleData();
+  }
+
+  private initSampleData() {
+    this.links = [
+      {
+        id: '1',
+        title: 'My Portfolio Website',
+        shortLink: 'hlink.ly/portfolio',
+        longLink: 'https://myportfolio.example.com/about',
+        domain: 'hlink.ly',
+        code: 'portfolio',
+        expiryDate: '2025-12-31',
+        hasPassword: false,
+        createdAt: '2024-01-15T10:30:00Z',
+        clicks: 125,
+        status: 'active'
+      },
+      {
+        id: '2',
+        title: 'Important Document',
+        shortLink: 'hlink.ly/doc123',
+        longLink: 'https://drive.google.com/file/d/1234567890abcdef/view',
+        domain: 'hlink.ly',
+        code: 'doc123',
+        hasPassword: true,
+        createdAt: '2024-02-10T14:22:00Z',
+        clicks: 45,
+        status: 'active'
+      },
+      {
+        id: '3',
+        title: 'GitHub Repository',
+        shortLink: 'custom.one/myrepo',
+        longLink: 'https://github.com/username/my-awesome-project',
+        domain: 'custom.one',
+        code: 'myrepo',
+        expiryDate: '2024-06-30',
+        hasPassword: false,
+        createdAt: '2024-01-05T09:15:00Z',
+        clicks: 89,
+        status: 'expired'
+      }
+    ];
+  }
 
   static styles = css`
     .page-header {
@@ -615,6 +668,9 @@ export class MyLinksPage extends LitElement {
         @update=${this.handleLinkUpdate}
         @edit-mode=${this.handleSwitchToEditMode}>
       </add-link-modal>
+
+      <!-- Confirmation Modal -->
+      <confirmation-modal></confirmation-modal>
     `;
   }
 
@@ -749,10 +805,22 @@ export class MyLinksPage extends LitElement {
     this.showModal = true;
   }
 
-  private deleteLink(link: LinkData) {
+  private async deleteLink(link: LinkData) {
     console.log('[MyLinks] Delete link:', link.id);
-    if (confirm(`Are you sure you want to delete "${link.title || link.shortLink}"?`)) {
+    
+    const linkDisplayName = link.title || link.shortLink;
+    const confirmed = await this.confirmationModal.show({
+      title: 'Delete Link',
+      message: `Are you sure you want to delete "${linkDisplayName}"? This action cannot be undone and all analytics data will be lost.`,
+      confirmText: 'Delete Link',
+      cancelText: 'Cancel',
+      type: 'danger',
+      icon: 'delete'
+    });
+
+    if (confirmed) {
       this.links = this.links.filter(l => l.id !== link.id);
+      console.log('[MyLinks] Link deleted successfully:', link.id);
     }
   }
 

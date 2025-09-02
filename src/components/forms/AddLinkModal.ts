@@ -135,16 +135,59 @@ export class AddLinkModal extends LitElement {
         text-decoration: underline;
       }
 
+      select.form-select {
+        width: 100%;
+        padding: var(--space-sm) var(--space-md);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-md);
+        transition: border-color var(--transition-base), box-shadow var(--transition-base);
+        box-sizing: border-box;
+        background-color: white !important;
+        color: #1f2937 !important;
+        height: 44px;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23111827' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right var(--space-sm) center;
+        background-repeat: no-repeat;
+        background-size: 16px 16px;
+        padding-right: calc(var(--space-md) + 24px);
+        cursor: pointer !important;
+        opacity: 1 !important;
+      }
+
+      select.form-select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-light);
+      }
+
+      /* Normal active state for form-select */
+      select.form-select:not(:disabled):not(:read-only) {
+        cursor: pointer;
+        background-color: white;
+        color: #1f2937;
+        opacity: 1;
+      }
+
+      /* Hover state for active selects */
+      select.form-select:not(:disabled):hover {
+        border-color: var(--color-primary);
+        cursor: pointer;
+      }
+
+      /* Disabled/readonly states */
       .form-input:read-only,
       .form-select:read-only,
       .form-select:disabled {
         background-color: var(--bg-secondary);
         color: var(--text-secondary);
         cursor: not-allowed;
+        opacity: 0.6;
       }
 
       .form-select:disabled {
-        opacity: 0.6;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
       }
 
       .spinner {
@@ -256,10 +299,11 @@ export class AddLinkModal extends LitElement {
             </div>
 
             <div class="form-group">
-              <label class="form-label">Domain & Custom Code</label>
               <div class="domain-code-group">
                 <div class="domain-select">
+                  <label class="form-label" for="domain-select">Domain</label>
                   <select
+                    id="domain-select"
                     class="form-select"
                     .value=${this.formData.domain}
                     @change=${this.handleDomainChange}
@@ -271,7 +315,9 @@ export class AddLinkModal extends LitElement {
                   </select>
                 </div>
                 <div class="code-input">
+                  <label class="form-label" for="custom-code-input">Custom Code</label>
                   <input
+                    id="custom-code-input"
                     class="form-input ${this.errors.code ? 'error' : ''}"
                     type="text"
                     .value=${this.formData.code}
@@ -284,10 +330,10 @@ export class AddLinkModal extends LitElement {
                     aria-describedby="code-help ${this.errors.code ? 'code-error' : ''}"
                     aria-invalid=${this.errors.code ? 'true' : 'false'}
                   />
+                  ${this.errors.code ? html`<span id="code-error" class="form-error" role="alert">${this.errors.code}</span>` : ''}
+                  <span class="form-help" id="code-help">${this.mode === 'add' ? 'Optional: Custom code for your short link' : 'Your link code (alias)'}</span>
                 </div>
               </div>
-              ${this.errors.code ? html`<span id="code-error" class="form-error" role="alert">${this.errors.code}</span>` : ''}
-              <span class="form-help" id="code-help">${this.mode === 'add' ? 'Optional: Custom code for your short link' : 'Your link code (alias)'}</span>
             </div>
 
             <div class="form-group">
@@ -407,7 +453,11 @@ export class AddLinkModal extends LitElement {
 
   private handleTitleChange(event: Event) {
     const target = event.target as HTMLInputElement;
+    if (!target) return;
+    
     this.formData = { ...this.formData, title: target.value };
+    
+    // Clear field error when user starts typing valid input
     if (this.touched.title) {
       this.validateField('title');
     }
@@ -415,7 +465,11 @@ export class AddLinkModal extends LitElement {
 
   private handleLongLinkChange(event: Event) {
     const target = event.target as HTMLInputElement;
+    if (!target) return;
+    
     this.formData = { ...this.formData, longLink: target.value };
+    
+    // Clear field error when user starts typing valid input
     if (this.touched.longLink) {
       this.validateField('longLink');
     }
@@ -423,12 +477,23 @@ export class AddLinkModal extends LitElement {
 
   private handleDomainChange(event: Event) {
     const target = event.target as HTMLSelectElement;
-    this.formData = { ...this.formData, domain: target.value as 'hlink.ly' | 'custom.one' };
+    if (!target) return;
+    
+    this.formData = { ...this.formData, domain: target.value };
   }
 
   private handleCodeChange(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.formData = { ...this.formData, code: target.value };
+    if (!target) return;
+    
+    // Only allow alphanumeric characters and hyphens for code
+    const sanitizedValue = target.value.replace(/[^a-zA-Z0-9-]/g, '');
+    if (target.value !== sanitizedValue) {
+      target.value = sanitizedValue;
+    }
+    
+    this.formData = { ...this.formData, code: sanitizedValue };
+    
     if (this.touched.code) {
       this.validateField('code');
     }
@@ -436,7 +501,10 @@ export class AddLinkModal extends LitElement {
 
   private handleExpiryDateChange(event: Event) {
     const target = event.target as HTMLInputElement;
+    if (!target) return;
+    
     this.formData = { ...this.formData, expiryDate: target.value };
+    
     if (this.touched.expiryDate) {
       this.validateField('expiryDate');
     }
@@ -444,7 +512,10 @@ export class AddLinkModal extends LitElement {
 
   private handlePasswordChange(event: Event) {
     const target = event.target as HTMLInputElement;
+    if (!target) return;
+    
     this.formData = { ...this.formData, password: target.value };
+    
     if (this.touched.password) {
       this.validateField('password');
     }
@@ -540,6 +611,10 @@ export class AddLinkModal extends LitElement {
 
   private async handleSubmit(event: Event) {
     event.preventDefault();
+    
+    // Prevent double submission
+    if (this.isSubmitting) return;
+    
     this.isSubmitting = true;
 
     try {
@@ -550,6 +625,29 @@ export class AddLinkModal extends LitElement {
         code: true,
         expiryDate: true,
         password: true
+      };
+
+      // Validate required fields
+      const trimmedLongLink = this.formData.longLink.trim();
+      if (!trimmedLongLink) {
+        this.errors.longLink = 'Long Link is required';
+        return;
+      }
+      
+      // Validate URL format
+      const urlPattern = /^https?:\/\/.+/;
+      if (!urlPattern.test(trimmedLongLink)) {
+        this.errors.longLink = 'Please enter a valid URL starting with http:// or https://';
+        return;
+      }
+      
+      // Update form data with trimmed values
+      this.formData = {
+        ...this.formData,
+        title: this.formData.title.trim(),
+        longLink: trimmedLongLink,
+        code: this.formData.code.trim(),
+        password: this.formData.password
       };
 
       if (!this.validateForm()) {
@@ -566,9 +664,16 @@ export class AddLinkModal extends LitElement {
         bubbles: true,
         composed: true
       }));
+      
+      // Clear form on successful submission for add mode
+      if (this.mode === 'add') {
+        this.resetForm();
+      }
 
     } catch (error) {
       console.error('[AddLinkModal] Submit error:', error);
+      // Set a user-friendly error message
+      this.errors.longLink = 'Failed to create link. Please try again.';
     } finally {
       this.isSubmitting = false;
     }
@@ -586,6 +691,7 @@ export class AddLinkModal extends LitElement {
     this.errors = {};
     this.touched = {};
     this.showPassword = false;
+    this.isSubmitting = false;
   }
 
   private getTomorrowDate(): string {
