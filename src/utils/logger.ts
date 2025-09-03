@@ -10,7 +10,7 @@ interface LogContext {
   action?: string;
   userId?: string;
   timestamp?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 class Logger {
@@ -20,7 +20,7 @@ class Logger {
   /**
    * Log general information (hidden in production)
    */
-  log(message: string, data?: any, context?: LogContext): void {
+  log(message: string, data?: unknown, context?: LogContext): void {
     if (!this.isProduction) {
       this.logWithContext('log', message, data, context);
     }
@@ -29,7 +29,7 @@ class Logger {
   /**
    * Log development-only information
    */
-  debug(message: string, data?: any, context?: LogContext): void {
+  debug(message: string, data?: unknown, context?: LogContext): void {
     if (this.isDevelopment) {
       this.logWithContext('debug', message, data, context);
     }
@@ -38,21 +38,21 @@ class Logger {
   /**
    * Log information (shown in all environments)
    */
-  info(message: string, data?: any, context?: LogContext): void {
+  info(message: string, data?: unknown, context?: LogContext): void {
     this.logWithContext('info', message, data, context);
   }
 
   /**
    * Log warnings (shown in all environments)
    */
-  warn(message: string, data?: any, context?: LogContext): void {
+  warn(message: string, data?: unknown, context?: LogContext): void {
     this.logWithContext('warn', message, data, context);
   }
 
   /**
    * Log errors (shown in all environments)
    */
-  error(message: string, error?: Error | any, context?: LogContext): void {
+  error(message: string, error?: Error | unknown, context?: LogContext): void {
     this.logWithContext('error', message, error, context);
     
     // In production, send to error reporting service
@@ -64,7 +64,7 @@ class Logger {
   /**
    * Log user actions for analytics (production-safe)
    */
-  analytics(event: string, data?: any, context?: LogContext): void {
+  analytics(event: string, data?: unknown, context?: LogContext): void {
     const analyticsData = {
       event,
       timestamp: new Date().toISOString(),
@@ -102,7 +102,7 @@ class Logger {
   private logWithContext(
     level: LogLevel, 
     message: string, 
-    data?: any, 
+    data?: unknown, 
     context?: LogContext
   ): void {
     // Use appropriate console method
@@ -115,7 +115,7 @@ class Logger {
     }
   }
 
-  private sendToErrorReporting(message: string, error?: any, context?: LogContext): void {
+  private sendToErrorReporting(message: string, error?: unknown, context?: LogContext): void {
     // Integrate with error reporting service (Sentry, Rollbar, etc.)
     // Example: Sentry.captureException(error, { tags: context });
     
@@ -123,8 +123,8 @@ class Logger {
     try {
       const errorLog = {
         message,
-        error: error?.message || error,
-        stack: error?.stack,
+        error: (error as Error)?.message || String(error),
+        stack: (error as Error)?.stack,
         context,
         timestamp: new Date().toISOString()
       };
@@ -144,13 +144,13 @@ class Logger {
     }
   }
 
-  private sendToAnalytics(_data: any): void {
+  private sendToAnalytics(_data: unknown): void {
     // Integrate with analytics service
     // Example: gtag('event', _data.event, _data);
     // For now, use a placeholder
   }
 
-  private sendToPerformanceMonitoring(_data: any): void {
+  private sendToPerformanceMonitoring(_data: unknown): void {
     // Integrate with performance monitoring
     // Example: Send to Web Vitals, DataDog, etc.
     // For now, use a placeholder
@@ -159,7 +159,7 @@ class Logger {
   /**
    * Get stored error logs (useful for debugging)
    */
-  getErrorLogs(): any[] {
+  getErrorLogs(): unknown[] {
     try {
       const logs = sessionStorage.getItem('error_logs');
       return logs ? JSON.parse(logs) : [];

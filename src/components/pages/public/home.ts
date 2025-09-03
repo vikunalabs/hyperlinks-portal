@@ -1,9 +1,9 @@
 import { html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { BaseComponent } from '../shared/base-component';
-import { appRouter } from '../../router';
-import '../ui/button';
-import '../ui/icon';
+import { BaseComponent } from '../../shared/base-component';
+import { appRouter } from '../../../router';
+import '../../ui/button';
+import '../../ui/icon';
 
 interface FeatureCard {
   icon: 'lightning' | 'database' | 'shield';
@@ -242,6 +242,9 @@ export class HomeContent extends BaseComponent {
             <div class="navigation-links">
               <a href="/" class="nav-link" @click="${(e: Event) => this.handleNavigation(e, '/')}">
                 Home
+              </a>
+              <a href="/dashboard" class="nav-link" @click="${(e: Event) => this.handleNavigation(e, '/dashboard')}">
+                Dashboard (Protected)
               </a>
               <a href="/terms-of-service" class="nav-link" @click="${(e: Event) => this.handleNavigation(e, '/terms-of-service')}">
                 Terms of Service

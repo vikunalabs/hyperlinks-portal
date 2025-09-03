@@ -3,6 +3,7 @@
 import { authStore } from '../stores/auth.store';
 import { appStore } from '../stores/app.store';
 import { appRouter, ROUTES } from './index';
+import { logger } from '../utils/logger';
 
 export interface GuardResult {
   canActivate: boolean;
@@ -64,7 +65,7 @@ export class AuthGuard {
    */
   static async executeGuard(guardResult: GuardResult): Promise<boolean> {
     if (!guardResult.canActivate && guardResult.redirectTo) {
-      console.log(`[AuthGuard] Access denied: ${guardResult.reason}, redirecting to ${guardResult.redirectTo}`);
+      logger.debug(`[AuthGuard] Access denied: ${guardResult.reason}, redirecting to ${guardResult.redirectTo}`, { guardResult }, { component: 'AuthGuard', action: 'access_denied' });
       
       // Show notification if reason provided
       if (guardResult.reason) {
@@ -107,7 +108,7 @@ export class AuthGuard {
         await getCurrentUser();
         return authStore.getState().isAuthenticated;
       } catch (error) {
-        console.log('[AuthGuard] No valid authentication found');
+        logger.debug('[AuthGuard] No valid authentication found', null, { component: 'AuthGuard', action: 'auth_not_found' });
         return false;
       }
     }
@@ -119,13 +120,13 @@ export class AuthGuard {
    * Initialize authentication check on app start
    */
   static async initializeAuth(): Promise<void> {
-    console.log('[AuthGuard] Initializing authentication check');
+    logger.debug('[AuthGuard] Initializing authentication check', null, { component: 'AuthGuard', action: 'init_auth_check' });
     
     try {
       await this.checkAuthStatus();
-      console.log('[AuthGuard] Authentication check completed');
+      logger.debug('[AuthGuard] Authentication check completed', null, { component: 'AuthGuard', action: 'auth_check_completed' });
     } catch (error) {
-      console.log('[AuthGuard] Authentication check failed:', error);
+      logger.error('[AuthGuard] Authentication check failed', error, { component: 'AuthGuard', action: 'auth_check_failed' });
     }
   }
 }

@@ -4,11 +4,12 @@ import { BaseComponent } from './components/shared/base-component';
 import { PerformanceMonitor, measurePerformance } from './utils/performance';
 import { ErrorHandler } from './utils/error-handler';
 import { appRouter } from './router';
+import { logger } from './utils/logger';
 
 // Import core components (always needed)
-import './components/layout/navbar';
-import './components/layout/footer';  
-import './components/pages/home';
+import './components/layouts/public-layout';
+import './components/layouts/protected-layout';
+import './components/pages/public/home';
 import './components/ui/button';
 import './components/ui/icon';
 
@@ -22,6 +23,9 @@ export class AppRoot extends BaseComponent {
   
   @state()
   protected currentPage: string = 'home-content';
+  
+  @state()
+  protected currentRoute: any = null;
   
   @state()
   protected isPageLoading: boolean = false;
@@ -164,8 +168,9 @@ export class AppRoot extends BaseComponent {
   
   private handleRouteChange = (event: Event) => {
     const customEvent = event as CustomEvent;
-    const { componentTag } = customEvent.detail;
+    const { componentTag, route } = customEvent.detail;
     this.currentPage = componentTag;
+    this.currentRoute = route;
   };
   
   private handleRouteLoading = (event: Event) => {
@@ -185,6 +190,8 @@ export class AppRoot extends BaseComponent {
     
     // Render component based on the componentTag from router
     switch (this.currentPage) {
+      case 'dashboard-page':
+        return html`<dashboard-page></dashboard-page>`;
       case 'terms-of-service-page':
         return html`<terms-of-service-page></terms-of-service-page>`;
       case 'privacy-policy-page':
@@ -193,6 +200,10 @@ export class AppRoot extends BaseComponent {
       default:
         return html`<home-content></home-content>`;
     }
+  }
+
+  private getLayoutType(): 'public' | 'protected' {
+    return this.currentRoute?.layout || 'public';
   }
 
   render() {
@@ -219,14 +230,22 @@ export class AppRoot extends BaseComponent {
       `;
     }
 
-    return html`
-      <div class="app-container">
-        <app-navbar></app-navbar>
-        <main class="main-content">
-          ${this.renderCurrentPage()}
-        </main>
-        <app-footer></app-footer>
-      </div>
-    `;
+    const layoutType = this.getLayoutType();
+    
+    switch (layoutType) {
+      case 'protected':
+        return html`
+          <protected-layout>
+            ${this.renderCurrentPage()}
+          </protected-layout>
+        `;
+      case 'public':
+      default:
+        return html`
+          <public-layout>
+            ${this.renderCurrentPage()}
+          </public-layout>
+        `;
+    }
   }
 }

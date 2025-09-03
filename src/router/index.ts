@@ -1,14 +1,16 @@
 // Main router implementation with Navigo
 
 import Navigo from 'navigo';
-import { routes, ROUTES, type RouteConfig } from './routes';
+import { routes, ROUTES, type RouteConfig, setCurrentRoute } from './routes';
 import { authStore } from '../stores/auth.store';
 import { appStore } from '../stores/app.store';
 import { AuthGuard, routeGuards } from './auth-guard';
+import { logger } from '../utils/logger';
 
 export class AppRouter {
   private router: Navigo;
   private isInitialized = false;
+  private currentRoute: RouteConfig | null = null;
 
   constructor() {
     this.router = new Navigo('/', { 
@@ -22,7 +24,7 @@ export class AppRouter {
    */
   public async init(): Promise<void> {
     if (this.isInitialized) {
-      console.warn('[Router] Already initialized');
+      logger.warn('[Router] Already initialized', null, { component: 'Router', action: 'already_initialized' });
       return;
     }
 
@@ -34,7 +36,7 @@ export class AppRouter {
     this.router.resolve();
     
     this.isInitialized = true;
-    console.log('[Router] Initialized with', routes.length, 'routes');
+    logger.debug('[Router] Initialized with routes', { routeCount: routes.length }, { component: 'Router', action: 'router_initialized' });
   }
 
   /**
@@ -49,6 +51,13 @@ export class AppRouter {
    */
   public getCurrentPath(): string {
     return this.router.getCurrentLocation().url;
+  }
+
+  /**
+   * Get current route configuration
+   */
+  public getCurrentRoute(): RouteConfig | null {
+    return this.currentRoute;
   }
 
   /**
@@ -77,14 +86,17 @@ export class AppRouter {
 
   private setupNotFoundHandler(): void {
     this.router.notFound(() => {
-      console.log('[Router] Route not found, redirecting to login');
+      logger.debug('[Router] Route not found, redirecting to login', null, { component: 'Router', action: 'route_not_found' });
       // Redirect to login for unknown routes
       this.navigate(ROUTES.LOGIN);
     });
   }
 
   private async handleRoute(route: RouteConfig): Promise<void> {
-    console.log(`[Router] Handling route: ${route.path}`, { protected: route.protected });
+    logger.debug(`[Router] Handling route: ${route.path}`, { path: route.path, protected: route.protected }, { component: 'Router', action: 'handle_route' });
+
+    // Store current route
+    this.currentRoute = route;
 
     // Set page title if provided
     if (route.title) {
@@ -115,9 +127,11 @@ export class AppRouter {
 
     // Execute route handler
     try {
+      // Set current route globally for handlers to access
+      setCurrentRoute(route);
       route.handler();
     } catch (error) {
-      console.error('[Router] Error executing route handler:', error);
+      logger.error('[Router] Error executing route handler', error, { component: 'Router', action: 'route_handler_error' });
       appStore.getState().showNotification({
         type: 'error',
         message: 'Failed to load page',

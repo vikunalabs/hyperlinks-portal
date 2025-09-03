@@ -34,7 +34,7 @@ export interface AuthResponse {
 }
 
 // API Response wrapper (matches backend APIResponse.java)
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   status: number;
   data: T | null;
   error: ApiError | null;
@@ -54,7 +54,7 @@ export interface FieldError {
   field: string;
   code: string;
   message: string;
-  rejectedValue?: any;
+  rejectedValue?: unknown;
 }
 
 // State management types

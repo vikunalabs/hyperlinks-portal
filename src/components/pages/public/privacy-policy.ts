@@ -1,6 +1,6 @@
 import { html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { BaseComponent } from '../shared/base-component';
+import { BaseComponent } from '../../shared/base-component';
 
 @customElement('privacy-policy-page')
 export class PrivacyPolicyPage extends BaseComponent {

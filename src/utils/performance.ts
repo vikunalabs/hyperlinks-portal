@@ -29,7 +29,7 @@ export class PerformanceMonitor {
       // Monitor First Input Delay
       const fidObserver = new PerformanceObserver((entryList) => {
         for (const entry of entryList.getEntries()) {
-          const fidEntry = entry as any; // Type assertion for FID entry
+          const fidEntry = entry as PerformanceEntry & { processingStart?: number }; // Type assertion for FID entry
           if (fidEntry.processingStart) {
             this.metrics.set('fid', fidEntry.processingStart - entry.startTime);
           }
@@ -41,7 +41,7 @@ export class PerformanceMonitor {
       const clsObserver = new PerformanceObserver((entryList) => {
         let clsValue = 0;
         for (const entry of entryList.getEntries()) {
-          const clsEntry = entry as any; // Type assertion for CLS entry
+          const clsEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }; // Type assertion for CLS entry
           if (!clsEntry.hadRecentInput && clsEntry.value !== undefined) {
             clsValue += clsEntry.value;
           }
@@ -109,11 +109,11 @@ export class PerformanceMonitor {
  * Performance decorator for measuring method execution time
  */
 export function measurePerformance(name?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
-    const measureName = name || `${target.constructor.name}.${propertyKey}`;
+    const measureName = name || `${(target as any).constructor.name}.${propertyKey}`;
     
-    descriptor.value = function (...args: any[]) {
+    descriptor.value = function (...args: unknown[]) {
       const monitor = PerformanceMonitor.getInstance();
       monitor.markStart(measureName);
       

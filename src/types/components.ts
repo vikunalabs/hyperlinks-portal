@@ -84,7 +84,7 @@ export interface LoadingProps extends BaseComponentProps {
  */
 export interface ErrorBoundaryProps extends BaseComponentProps {
   fallback?: string | HTMLElement;
-  onError?: (error: Error, errorInfo: any) => void;
+  onError?: (error: Error, errorInfo: unknown) => void;
 }
 
 /**
@@ -112,7 +112,7 @@ export interface ComponentState {
 export interface ComponentLifecycle {
   onMount?(): void | Promise<void>;
   onUnmount?(): void | Promise<void>;
-  onUpdate?(changedProperties: Map<string, any>): void | Promise<void>;
+  onUpdate?(changedProperties: Map<string, unknown>): void | Promise<void>;
   onError?(error: Error): void;
 }
 

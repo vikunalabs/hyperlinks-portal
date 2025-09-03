@@ -1,6 +1,6 @@
 import { html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { BaseComponent } from '../shared/base-component';
+import { BaseComponent } from '../../shared/base-component';
 
 @customElement('terms-of-service-page')
 export class TermsOfServicePage extends BaseComponent {
