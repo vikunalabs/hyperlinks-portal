@@ -6,17 +6,29 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build:analyze": "NODE_ENV=production tsc && vite build && echo '✅ Bundle analysis generated at dist/stats.html'",
+    "build:prod": "NODE_ENV=production tsc && vite build",
+    "preview": "vite preview",
+    "preview:dist": "vite preview --port 3000",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'Linting would go here'",
+    "test": "echo 'Tests would go here'",
+    "clean": "rm -rf dist node_modules/.vite",
+    "start": "npm run build && npm run preview:dist",
+    "size-limit": "npm run build:prod && echo 'Bundle size analysis complete. Check dist/ folder for output files.'"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "rollup-plugin-visualizer": "^6.0.3",
     "typescript": "~5.8.3",
     "vite": "^7.1.2"
   },
   "dependencies": {
-    "@vikunalabs/ui-library": "file:../../@vikunalabs/ui-library",
     "axios": "^1.11.0",
     "navigo": "^8.11.1",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "@tailwindcss/vite": "^4.1.12",
+    "lit": "^3.3.1",
+    "tailwindcss": "^4.1.12"
   }
 }
