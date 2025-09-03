@@ -1,13 +1,18 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { navigationStore } from '../../stores/navigation.store';
+import { authStore } from '../../stores/auth.store';
+import type { User } from '../../types/auth.types';
 
 @customElement('app-sidebar')
 export class Sidebar extends LitElement {
   @property() activeRoute = '';
   @state() private isSettingsOpen = false;
+  @state() private user: User | null = null;
+  @state() private isProfileDropdownOpen = false;
   
   private unsubscribe?: () => void;
+  private authUnsubscribe?: () => void;
 
   connectedCallback() {
     super.connectedCallback();
@@ -15,12 +20,27 @@ export class Sidebar extends LitElement {
     this.unsubscribe = navigationStore.subscribe((state) => {
       this.isSettingsOpen = state.isSettingsOpen;
     });
+    
+    // Subscribe to auth store changes
+    this.authUnsubscribe = authStore.subscribe((state) => {
+      this.user = state.user;
+    });
+    
+    // Set initial user value
+    this.user = authStore.getState().user;
+    
+    // Handle clicks outside to close profile dropdown
+    document.addEventListener('click', this.handleOutsideClick.bind(this));
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    // Clean up subscription
+    // Clean up subscriptions
     this.unsubscribe?.();
+    this.authUnsubscribe?.();
+    
+    // Clean up click listener
+    document.removeEventListener('click', this.handleOutsideClick.bind(this));
   }
 
   static styles = css`
@@ -46,10 +66,128 @@ export class Sidebar extends LitElement {
       border-bottom: 1px solid var(--border-color);
     }
 
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-lg) 0;
+      margin-bottom: var(--space-lg);
+      border-bottom: 1px solid var(--border-color-light);
+      position: relative;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-inverse);
+      font-weight: var(--font-weight-bold);
+      font-size: var(--font-size-lg);
+      flex-shrink: 0;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .user-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .user-name {
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      margin: 0 0 var(--space-xs) 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-email {
+      font-size: var(--font-size-sm);
+      color: var(--text-muted);
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .profile-dropdown-trigger {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: var(--space-xs);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      transition: all var(--transition-base);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .profile-dropdown-trigger:hover {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .profile-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 1001;
+      overflow: hidden;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: all var(--transition-base);
+    }
+
+    .profile-dropdown.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .profile-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-md);
+      color: var(--text-secondary);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all var(--transition-base);
+      font-size: var(--font-size-sm);
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .profile-dropdown-item:hover {
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .profile-dropdown-item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
     .logo {
       display: flex;
       align-items: center;
       gap: var(--space-md);
+      margin-bottom: var(--space-lg);
     }
 
     .logo-icon {
@@ -213,7 +351,7 @@ export class Sidebar extends LitElement {
   render() {
     return html`
       <div class="sidebar">
-        <!-- Logo -->
+        <!-- Header with Logo and User Profile -->
         <div class="sidebar-header">
           <div class="logo">
             <div class="logo-icon">
@@ -222,6 +360,45 @@ export class Sidebar extends LitElement {
               </svg>
             </div>
             <h1 class="logo-text">Linkly</h1>
+          </div>
+          
+          <!-- User Profile Section -->
+          <div class="user-profile">
+            <div class="user-avatar">
+              ${this.getUserInitial()}
+            </div>
+            <div class="user-info">
+              <div class="user-name">${this.getUserDisplayName()}</div>
+              <div class="user-email">${this.getUserEmail()}</div>
+            </div>
+            <button class="profile-dropdown-trigger" @click=${this.toggleProfileDropdown} title="Profile options">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            
+            <!-- Profile Dropdown -->
+            <div class="profile-dropdown ${this.isProfileDropdownOpen ? 'open' : ''}">
+              <button class="profile-dropdown-item" @click=${() => this.navigateToProfile('/profile')}>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                View Profile
+              </button>
+              <button class="profile-dropdown-item" @click=${() => this.navigateToProfile('/settings/account')}>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                Account Settings
+              </button>
+              <button class="profile-dropdown-item" @click=${() => this.navigateToProfile('/settings/billing')}>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+                Billing & Plans
+              </button>
+            </div>
           </div>
         </div>
 
@@ -315,5 +492,43 @@ export class Sidebar extends LitElement {
       bubbles: true,
       composed: true
     }));
+  }
+
+  private getUserInitial(): string {
+    if (this.user?.name) {
+      return this.user.name.charAt(0).toUpperCase();
+    } else if (this.user?.username) {
+      return this.user.username.charAt(0).toUpperCase();
+    }
+    return 'U';
+  }
+
+  private getUserDisplayName(): string {
+    if (this.user?.name) {
+      return this.user.name;
+    } else if (this.user?.username) {
+      return this.user.username;
+    }
+    return 'User';
+  }
+
+  private getUserEmail(): string {
+    return this.user?.email || 'user@example.com';
+  }
+
+  private toggleProfileDropdown() {
+    this.isProfileDropdownOpen = !this.isProfileDropdownOpen;
+  }
+
+  private navigateToProfile(path: string) {
+    this.isProfileDropdownOpen = false;
+    this.navigateTo(path);
+  }
+
+  private handleOutsideClick(event: Event) {
+    const target = event.target as HTMLElement;
+    if (!this.shadowRoot?.contains(target)) {
+      this.isProfileDropdownOpen = false;
+    }
   }
 }
