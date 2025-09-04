@@ -3,6 +3,9 @@ import '../style/main.css'
 // Import stores
 import { appStore } from '../stores';
 
+// Import home page component
+import '../components/home-page';
+
 // Application entry point
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize app
@@ -10,17 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const app = document.getElementById('app')!;
   
-  app.innerHTML = `
-    <div style="padding: 2rem; text-align: center;">
-      <h1>Hyperlinks Management Platform</h1>
-      <p>Phase A.1: Core Infrastructure - Complete</p>
-      <ul style="list-style: none; margin: 2rem 0;">
-        <li>✓ HTTP Service Layer</li>
-        <li>✓ CSRF Token Management</li>
-        <li>✓ Authentication Service</li>
-        <li>✓ Zustand State Management</li>
-        <li>✓ Type Definitions</li>
-      </ul>
-    </div>
-  `;
+  // Render the home page component
+  app.innerHTML = `<home-page></home-page>`;
 });

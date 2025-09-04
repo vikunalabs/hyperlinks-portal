@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+/* TailwindCSS v4.x Configuration */
+@theme {
+  /* Custom colors for the hyperlinks management platform */
+  --color-primary: #3b82f6;
+  --color-primary-dark: #1e40af;
+  --color-secondary: #6b7280;
+  --color-accent: #e3a008;
+  --color-success: #10b981;
+  --color-warning: #e3a008;
+  --color-error: #ef4444;
+  
+  /* Custom spacing */
+  --spacing-xs: 0.125rem;
+  --spacing-sm: 0.25rem;
+  --spacing-md: 0.5rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 1.5rem;
+  --spacing-2xl: 2rem;
+  --spacing-3xl: 3rem;
+  --spacing-section: 4rem;
+  
+  /* Custom fonts */
+  --font-family-sans: "Inter", system-ui, sans-serif;
+  --font-family-mono: "Fira Code", monospace;
+  
+  /* Custom breakpoints */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  
+  /* Theme colors for light/dark mode */
+  --color-bg: light-dark(white, #0f0f0f);
+  --color-text: light-dark(#171717, #fafafa);
+  --color-border: light-dark(#e5e5e5, #262626);
+}
+
+/* Custom base styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-sans);
+  line-height: 1.5;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Focus styles for accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Custom utilities for the hyperlinks platform */
+@utility container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@utility btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-primary) 90%, black);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+@utility btn-secondary {
+  background-color: transparent;
+  color: var(--color-primary);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  border: 2px solid var(--color-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  &:hover {
+    background-color: var(--color-primary);
+    color: white;
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+@utility card {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  padding: 1.5rem;
+  transition: all 0.3s;
+  
+  &:hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+@utility hero-gradient {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 50%, #f0f9ff 100%);
+}
