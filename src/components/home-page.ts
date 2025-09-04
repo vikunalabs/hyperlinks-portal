@@ -1,6 +1,14 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { customElement, state } from 'lit/decorators.js';
+import { ref, createRef } from 'lit/directives/ref.js';
 import tailwindStyles from '../style/main.css?inline';
+import './common/app-navbar';
+import './common/app-footer';
+import './modals/login-modal';
+import './modals/register-modal';
+import './modals/forgot-password-modal';
+import './modals/password-reset-confirmation-modal';
+import type { NavbarButton } from './common/app-navbar';
 
 @customElement('home-page')
 export class HomePage extends LitElement {
@@ -14,31 +22,130 @@ export class HomePage extends LitElement {
     `
   ];
 
+  private loginModalRef = createRef<any>();
+  private registerModalRef = createRef<any>();
+  private forgotPasswordModalRef = createRef<any>();
+  private passwordResetConfirmationModalRef = createRef<any>();
+
+  private handleLoginClick = () => {
+    console.log('Login button clicked');
+    console.log('Modal ref:', this.loginModalRef.value);
+    if (this.loginModalRef.value) {
+      console.log('Opening modal...');
+      this.loginModalRef.value.open();
+    } else {
+      console.log('Modal ref is null');
+    }
+  };
+
+  private handleRegisterClick = () => {
+    console.log('Register button clicked');
+    if (this.registerModalRef.value) {
+      this.registerModalRef.value.open();
+    }
+  };
+
+  private handleLoginSubmit = (e: CustomEvent) => {
+    const { usernameOrEmail, password, rememberMe } = e.detail;
+    console.log('Login attempt:', { usernameOrEmail, password, rememberMe });
+    
+    // Here you would typically call your authentication service
+    // For now, just close the modal after a delay
+    setTimeout(() => {
+      this.loginModalRef.value?.close();
+    }, 1000);
+  };
+
+  private handleRegisterSubmit = (e: CustomEvent) => {
+    const { username, email, password, organization, acceptTerms } = e.detail;
+    console.log('Register attempt:', { username, email, password, organization, acceptTerms });
+    
+    // Here you would typically call your authentication service
+    // For now, just close the modal after a delay
+    setTimeout(() => {
+      this.registerModalRef.value?.close();
+    }, 1000);
+  };
+
+  // Handle cross-modal navigation
+  private handleNavigateToSignup = () => {
+    this.loginModalRef.value?.close();
+    setTimeout(() => {
+      this.registerModalRef.value?.open();
+    }, 100);
+  };
+
+  private handleNavigateToSignin = () => {
+    this.registerModalRef.value?.close();
+    setTimeout(() => {
+      this.loginModalRef.value?.open();
+    }, 100);
+  };
+
+  // Handle forgot password flow
+  private handleForgotPasswordClick = () => {
+    this.loginModalRef.value?.close();
+    setTimeout(() => {
+      this.forgotPasswordModalRef.value?.open();
+    }, 100);
+  };
+
+  private handleForgotPasswordSubmit = (e: CustomEvent) => {
+    const { email } = e.detail;
+    console.log('Password reset requested for:', email);
+    
+    // Close forgot password modal and show confirmation
+    this.forgotPasswordModalRef.value?.close();
+    
+    // Set email in confirmation modal and open it
+    setTimeout(() => {
+      if (this.passwordResetConfirmationModalRef.value) {
+        this.passwordResetConfirmationModalRef.value.email = email;
+        this.passwordResetConfirmationModalRef.value.open();
+      }
+    }, 100);
+  };
+
+  private handleBackToLogin = () => {
+    // Close any open modals and return to login
+    this.forgotPasswordModalRef.value?.close();
+    this.passwordResetConfirmationModalRef.value?.close();
+    setTimeout(() => {
+      this.loginModalRef.value?.open();
+    }, 100);
+  };
+
+  private handleResendResetEmail = (e: CustomEvent) => {
+    const { email } = e.detail;
+    console.log('Resending password reset email to:', email);
+    
+    // In a real app, you would make an API call here
+    // For now, just show the confirmation modal again
+    setTimeout(() => {
+      if (this.passwordResetConfirmationModalRef.value) {
+        this.passwordResetConfirmationModalRef.value.email = email;
+        this.passwordResetConfirmationModalRef.value.open();
+      }
+    }, 100);
+  };
+
   render() {
+    const navbarButtons: NavbarButton[] = [
+      {
+        label: 'Login',
+        type: 'secondary',
+        handler: this.handleLoginClick
+      },
+      {
+        label: 'Register', 
+        type: 'primary',
+        handler: this.handleRegisterClick
+      }
+    ];
+
     return html`
       <!-- Navbar -->
-      <nav class="bg-white shadow-sm border-b border-gray-200">
-        <div class="container">
-          <div class="flex justify-between items-center h-16">
-            <!-- Logo/Title -->
-            <div class="flex-shrink-0">
-              <h1 class="text-xl font-semibold text-gray-900">
-                Hyperlinks Management Platform
-              </h1>
-            </div>
-            
-            <!-- Auth Buttons -->
-            <div class="flex space-x-4">
-              <button class="btn-secondary text-sm">
-                Login
-              </button>
-              <button class="btn-primary text-sm">
-                Register
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <app-navbar .buttons=${navbarButtons}></app-navbar>
 
       <!-- Main Content -->
       <main class="flex-1 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -88,70 +195,36 @@ export class HomePage extends LitElement {
       </main>
 
       <!-- Footer -->
-      <footer class="bg-gray-900 text-white py-12">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <!-- Company Info -->
-            <div class="md:col-span-2">
-              <h3 class="text-2xl font-bold mb-4">Hyperlinks Management Platform</h3>
-              <div class="text-gray-400 mb-6">
-                <p class="mb-2">The most intuitive way to organize, track, and share your important links.</p>
-                <p>Built for individuals and teams who value efficiency and security.</p>
-              </div>
-              <div class="flex space-x-4">
-                <a href="#" class="text-gray-400 hover:text-white transition-colors">
-                  <span class="sr-only">Twitter</span>
-                  🐦
-                </a>
-                <a href="#" class="text-gray-400 hover:text-white transition-colors">
-                  <span class="sr-only">GitHub</span>
-                  🐙
-                </a>
-                <a href="#" class="text-gray-400 hover:text-white transition-colors">
-                  <span class="sr-only">LinkedIn</span>
-                  💼
-                </a>
-              </div>
-            </div>
-            
-            <!-- Product Links -->
-            <div>
-              <h4 class="text-lg font-semibold mb-4">Product</h4>
-              <ul class="space-y-2">
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Features</a></li>
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Security</a></li>
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Enterprise</a></li>
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">API</a></li>
-              </ul>
-            </div>
-            
-            <!-- Support Links -->
-            <div>
-              <h4 class="text-lg font-semibold mb-4">Support</h4>
-              <ul class="space-y-2">
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Documentation</a></li>
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Contact Us</a></li>
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Status</a></li>
-                <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Community</a></li>
-              </ul>
-            </div>
-          </div>
-          
-          <!-- Bottom Bar -->
-          <div class="border-t border-gray-800 mt-12 pt-8 flex flex-col sm:flex-row justify-between items-center">
-            <p class="text-gray-400 text-sm">
-              &copy; 2025 Hyperlinks Management Platform. All rights reserved.
-            </p>
-            <div class="flex space-x-6 mt-4 sm:mt-0">
-              <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>
-              <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Terms of Service</a>
-              <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Cookie Policy</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <app-footer></app-footer>
+
+      <!-- Login Modal -->
+      <login-modal 
+        ${ref(this.loginModalRef)}
+        @modal-submit=${this.handleLoginSubmit}
+        @navigate-to-signup=${this.handleNavigateToSignup}
+        @forgot-password-clicked=${this.handleForgotPasswordClick}
+      ></login-modal>
+
+      <!-- Register Modal -->
+      <register-modal 
+        ${ref(this.registerModalRef)}
+        @modal-submit=${this.handleRegisterSubmit}
+        @navigate-to-signin=${this.handleNavigateToSignin}
+      ></register-modal>
+
+      <!-- Forgot Password Modal -->
+      <forgot-password-modal 
+        ${ref(this.forgotPasswordModalRef)}
+        @modal-submit=${this.handleForgotPasswordSubmit}
+        @back-to-login=${this.handleBackToLogin}
+      ></forgot-password-modal>
+
+      <!-- Password Reset Confirmation Modal -->
+      <password-reset-confirmation-modal 
+        ${ref(this.passwordResetConfirmationModalRef)}
+        @back-to-login=${this.handleBackToLogin}
+        @resend-reset-email=${this.handleResendResetEmail}
+      ></password-reset-confirmation-modal>
     `;
   }
 }
