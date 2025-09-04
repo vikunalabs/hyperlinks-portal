@@ -16,6 +16,54 @@ export class AppNavbar extends LitElement {
       :host {
         display: block;
       }
+      
+      /* Ensure button styles work properly in shadow DOM */
+      .btn-secondary {
+        background-color: transparent;
+        color: var(--color-primary, #3b82f6);
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        border: 2px solid var(--color-primary, #3b82f6);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        
+        &:hover {
+          background-color: var(--color-primary, #3b82f6);
+          color: white;
+          transform: translateY(-1px);
+        }
+        
+        &:active {
+          transform: translateY(0);
+        }
+      }
+      
+      .btn-primary {
+        background-color: var(--color-primary, #3b82f6);
+        color: white;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        
+        &:hover {
+          background-color: color-mix(in srgb, var(--color-primary, #3b82f6) 90%, black);
+          transform: translateY(-1px);
+        }
+        
+        &:active {
+          transform: translateY(0);
+        }
+      }
     `
   ];
 

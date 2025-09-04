@@ -1,6 +1,7 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import tailwindStyles from '../../style/main.css?inline';
+import { ModalScrollManager } from '../../utils/scrollbar';
 
 // Define types locally to avoid import issues
 interface ModalComponent {
@@ -115,8 +116,8 @@ export class PasswordResetConfirmationModal extends LitElement implements ModalC
     this.isModalOpen = true;
     this.modalState.isOpen = true;
     
-    // Prevent body scroll
-    document.body.style.overflow = 'hidden';
+    // Use modal scroll manager to prevent page tilt
+    ModalScrollManager.openModal();
     
     this.dispatchEvent(new CustomEvent('modal-opened', {
       bubbles: true,
@@ -128,8 +129,8 @@ export class PasswordResetConfirmationModal extends LitElement implements ModalC
     this.isModalOpen = false;
     this.modalState.isOpen = false;
     
-    // Restore body scroll
-    document.body.style.overflow = '';
+    // Use modal scroll manager to restore scrolling
+    ModalScrollManager.closeModal();
     
     // Restore focus
     if (this.modalState.previousActiveElement) {
@@ -179,8 +180,10 @@ export class PasswordResetConfirmationModal extends LitElement implements ModalC
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('keydown', this.handleKeyDown);
-    // Restore body scroll if modal is removed
-    document.body.style.overflow = '';
+    // Ensure modal scroll manager is cleaned up if modal is removed
+    if (this.isModalOpen) {
+      ModalScrollManager.closeModal();
+    }
   }
 
   render() {

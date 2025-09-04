@@ -57,6 +57,12 @@ html, body {
   outline-offset: 2px;
 }
 
+/* Modal scrollbar compensation to prevent page tilt */
+body.modal-open {
+  overflow: hidden;
+  padding-right: var(--scrollbar-width, 0px);
+}
+
 /* Custom utilities for the hyperlinks platform */
 @utility container {
   max-width: 1200px;
