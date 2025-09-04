@@ -3,6 +3,9 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ref, createRef } from 'lit/directives/ref.js';
 import tailwindStyles from '../../style/main.css?inline';
 import { ModalScrollManager } from '../../utils/scrollbar';
+import { withFocusTrap } from '../../utils/focus-trap';
+import { FormValidator } from '../../utils/validation';
+import { ErrorHandler } from '../../utils/error-handler';
 
 // Define types locally to avoid import issues
 interface ModalComponent {
@@ -28,7 +31,7 @@ interface ModalCustomEvent<T = any> extends CustomEvent {
 }
 
 @customElement('forgot-password-modal')
-export class ForgotPasswordModal extends LitElement implements ModalComponent {
+export class ForgotPasswordModal extends withFocusTrap(LitElement) implements ModalComponent {
   static styles = [
     css`${unsafeCSS(tailwindStyles)}`,
     css`
@@ -97,6 +100,19 @@ export class ForgotPasswordModal extends LitElement implements ModalComponent {
       .input-group {
         position: relative;
       }
+      
+      /* Screen reader only content */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
     `
   ];
 
@@ -118,8 +134,13 @@ export class ForgotPasswordModal extends LitElement implements ModalComponent {
 
   @state()
   private fieldErrors = {
-    email: ''
+    email: [] as string[]
   };
+
+  @state()
+  private validationDebounceTimeouts = new Map<string, NodeJS.Timeout>();
+
+  private eventCleanupFunctions: Array<() => void> = [];
 
   private formRef = createRef<HTMLFormElement>();
   private firstInputRef = createRef<HTMLInputElement>();
@@ -129,42 +150,61 @@ export class ForgotPasswordModal extends LitElement implements ModalComponent {
   }
 
   public open(): void {
-    this.modalState.previousActiveElement = document.activeElement as Element;
-    this.isModalOpen = true;
-    this.modalState.isOpen = true;
-    
-    // Use modal scroll manager to prevent page tilt
-    ModalScrollManager.openModal();
-    
-    // Focus first input after animation
-    setTimeout(() => {
-      this.firstInputRef.value?.focus();
-    }, 100);
-    
-    this.dispatchEvent(new CustomEvent('modal-opened', {
-      bubbles: true,
-      composed: true
-    }));
+    try {
+      this.modalState.previousActiveElement = document.activeElement as Element;
+      this.isModalOpen = true;
+      this.modalState.isOpen = true;
+      
+      // Use modal scroll manager to prevent page tilt
+      ModalScrollManager.openModal();
+      
+      // Create and activate focus trap
+      this.createFocusTrap();
+      
+      // Focus management after animation
+      setTimeout(() => {
+        this.activateFocusTrap(this.modalState.previousActiveElement || undefined);
+        // Auto-focus first input field
+        if (this.firstInputRef.value) {
+          this.firstInputRef.value.focus();
+        }
+      }, 100);
+      
+      this.dispatchEvent(new CustomEvent('modal-opened', {
+        bubbles: true,
+        composed: true
+      }));
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'ForgotPasswordModal',
+        method: 'open'
+      });
+    }
   }
 
   public close(): void {
-    this.isModalOpen = false;
-    this.modalState.isOpen = false;
-    this.modalState.error = null;
-    this.resetForm();
-    
-    // Use modal scroll manager to restore scrolling
-    ModalScrollManager.closeModal();
-    
-    // Restore focus
-    if (this.modalState.previousActiveElement) {
-      (this.modalState.previousActiveElement as HTMLElement).focus();
+    try {
+      this.isModalOpen = false;
+      this.modalState.isOpen = false;
+      this.modalState.error = null;
+      this.resetForm();
+      
+      // Deactivate focus trap first
+      this.deactivateFocusTrap();
+      
+      // Use modal scroll manager to restore scrolling
+      ModalScrollManager.closeModal();
+      
+      this.dispatchEvent(new CustomEvent('modal-closed', {
+        bubbles: true,
+        composed: true
+      }));
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'ForgotPasswordModal',
+        method: 'close'
+      });
     }
-    
-    this.dispatchEvent(new CustomEvent('modal-closed', {
-      bubbles: true,
-      composed: true
-    }));
   }
 
   public reset(): void {
@@ -178,26 +218,31 @@ export class ForgotPasswordModal extends LitElement implements ModalComponent {
       email: ''
     };
     this.fieldErrors = {
-      email: ''
+      email: []
     };
+    
+    // Clear any pending validation timeouts
+    this.validationDebounceTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.validationDebounceTimeouts.clear();
   }
 
   private validateForm(): boolean {
-    let isValid = true;
-    const errors = { email: '' };
+    try {
+      // Use FormValidator utility with input trimming
+      const emailResult = FormValidator.validateEmail(this.formData.email.trim());
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!this.formData.email.trim()) {
-      errors.email = 'Email is required';
-      isValid = false;
-    } else if (!emailRegex.test(this.formData.email)) {
-      errors.email = 'Please enter a valid email address';
-      isValid = false;
+      this.fieldErrors = {
+        email: emailResult.errors
+      };
+
+      return emailResult.isValid;
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'ForgotPasswordModal',
+        method: 'validateForm'
+      });
+      return false;
     }
-
-    this.fieldErrors = errors;
-    return isValid;
   }
 
   private isFormValid(): boolean {
@@ -210,15 +255,26 @@ export class ForgotPasswordModal extends LitElement implements ModalComponent {
 
   private handleInputChange(field: keyof typeof this.formData) {
     return (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      this.formData[field] = target.value;
-      
-      // Clear field error when user starts typing
-      if (field in this.fieldErrors) {
-        this.fieldErrors[field as keyof typeof this.fieldErrors] = '';
+      try {
+        const target = e.target as HTMLInputElement;
+        
+        // Apply input trimming
+        this.formData[field] = target.value.trim();
+        
+        // Clear field errors when user starts typing
+        this.fieldErrors[field as keyof typeof this.fieldErrors] = [];
+        
+        // Debounced real-time validation
+        this.debounceValidation(field, target.value);
+        
+        this.requestUpdate();
+      } catch (error) {
+        ErrorHandler.getInstance().handleError(error as Error, {
+          component: 'ForgotPasswordModal',
+          method: 'handleInputChange',
+          field
+        });
       }
-      
-      this.requestUpdate();
     };
   }
 
@@ -277,23 +333,73 @@ export class ForgotPasswordModal extends LitElement implements ModalComponent {
     document.addEventListener('keydown', this.handleKeyDown);
   }
 
+  private debounceValidation(field: keyof typeof this.formData, value: string): void {
+    // Clear existing timeout for this field
+    const existingTimeout = this.validationDebounceTimeouts.get(field);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    // Set new timeout for validation
+    const timeoutId = setTimeout(() => {
+      this.validateSingleField(field, value);
+    }, 300);
+
+    this.validationDebounceTimeouts.set(field, timeoutId);
+  }
+
+  private validateSingleField(field: keyof typeof this.formData, value: string): void {
+    try {
+      if (field === 'email') {
+        const result = FormValidator.validateEmail(value.trim());
+        this.fieldErrors.email = result.errors;
+      }
+      this.requestUpdate();
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'ForgotPasswordModal',
+        method: 'validateSingleField',
+        field
+      });
+    }
+  }
+
   disconnectedCallback() {
     super.disconnectedCallback();
+    
+    // Clean up event listeners
     document.removeEventListener('keydown', this.handleKeyDown);
+    this.eventCleanupFunctions.forEach(cleanup => cleanup());
+    this.eventCleanupFunctions = [];
+    
+    // Clear validation timeouts
+    this.validationDebounceTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.validationDebounceTimeouts.clear();
+    
     // Ensure modal scroll manager is cleaned up if modal is removed
     if (this.isModalOpen) {
       ModalScrollManager.closeModal();
     }
+    
+    // Deactivate focus trap
+    this.deactivateFocusTrap();
   }
 
   render() {
     return html`
-      <div class="modal-container" @click=${this.handleBackdropClick}>
+      <div 
+        class="modal-container" 
+        @click=${this.handleBackdropClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="forgot-password-modal-title"
+        aria-describedby="forgot-password-modal-description"
+      >
         <div class="modal-content bg-white rounded-2xl shadow-2xl" @click=${(e: Event) => e.stopPropagation()}>
           <!-- Header -->
           <div class="px-8 pt-8 pb-6">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-2xl font-bold text-gray-900">
+              <h2 id="forgot-password-modal-title" class="text-2xl font-bold text-gray-900">
                 Reset your password
               </h2>
               <button 
@@ -306,24 +412,36 @@ export class ForgotPasswordModal extends LitElement implements ModalComponent {
                 </svg>
               </button>
             </div>
-            <p class="text-gray-600">
+            <p id="forgot-password-modal-description" class="text-gray-600">
               Enter your email address and we'll send you a link to reset your password.
             </p>
           </div>
 
           <!-- Form -->
-          <form ${ref(this.formRef)} @submit=${this.handleSubmit} class="px-8 pb-8">
-            <!-- Error Display -->
-            ${this.modalState.error ? html`
-              <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p class="text-sm text-red-700">${this.modalState.error}</p>
+          <form 
+            ${ref(this.formRef)} 
+            @submit=${this.handleSubmit} 
+            class="px-8 pb-8"
+            novalidate
+          >
+            <!-- Live Region for Dynamic Updates -->
+            <div aria-live="polite" aria-atomic="true">
+              <!-- Error Display -->
+              ${this.modalState.error ? html`
+                <div 
+                  class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg"
+                  role="alert"
+                  aria-describedby="forgot-password-error-message"
+                >
+                  <div class="flex items-center">
+                    <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p id="forgot-password-error-message" class="text-sm text-red-700">${this.modalState.error}</p>
+                  </div>
                 </div>
-              </div>
-            ` : ''}
+              ` : ''}
+            </div>
 
             <!-- Email Field -->
             <div class="input-group mb-4">
@@ -334,14 +452,23 @@ export class ForgotPasswordModal extends LitElement implements ModalComponent {
                 ${ref(this.firstInputRef)}
                 type="email"
                 id="forgot-email"
+                name="email"
                 .value=${this.formData.email}
                 @input=${this.handleInputChange('email')}
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.email ? 'input-error' : ''}"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.email.length > 0 ? 'input-error' : ''}"
                 placeholder="Enter your email address"
                 ?disabled=${this.modalState.isLoading}
+                aria-required="true"
+                aria-invalid=${this.fieldErrors.email.length > 0 ? 'true' : 'false'}
+                aria-describedby=${this.fieldErrors.email.length > 0 ? 'forgot-email-error' : ''}
+                autocomplete="email"
               />
-              ${this.fieldErrors.email ? html`
-                <p class="mt-1 text-sm text-red-600">${this.fieldErrors.email}</p>
+              ${this.fieldErrors.email.length > 0 ? html`
+                <div id="forgot-email-error" role="alert" aria-live="polite">
+                  ${this.fieldErrors.email.map(error => html`
+                    <p class="mt-1 text-sm text-red-600">${error}</p>
+                  `)}
+                </div>
               ` : ''}
             </div>
 

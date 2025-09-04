@@ -2,6 +2,8 @@ import { LitElement, html, css, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import tailwindStyles from '../../style/main.css?inline';
 import { ModalScrollManager } from '../../utils/scrollbar';
+import { withFocusTrap } from '../../utils/focus-trap';
+import { ErrorHandler } from '../../utils/error-handler';
 
 // Define types locally to avoid import issues
 interface ModalComponent {
@@ -17,7 +19,7 @@ interface ModalState {
 }
 
 @customElement('password-reset-confirmation-modal')
-export class PasswordResetConfirmationModal extends LitElement implements ModalComponent {
+export class PasswordResetConfirmationModal extends withFocusTrap(LitElement) implements ModalComponent {
   static styles = [
     css`${unsafeCSS(tailwindStyles)}`,
     css`
@@ -92,6 +94,19 @@ export class PasswordResetConfirmationModal extends LitElement implements ModalC
           transform: scale(1);
         }
       }
+      
+      /* Screen reader only content */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
     `
   ];
 
@@ -107,40 +122,62 @@ export class PasswordResetConfirmationModal extends LitElement implements ModalC
     previousActiveElement: null
   };
 
+  private eventCleanupFunctions: Array<() => void> = [];
+
   get isOpen(): boolean {
     return this.isModalOpen;
   }
 
   public open(): void {
-    this.modalState.previousActiveElement = document.activeElement as Element;
-    this.isModalOpen = true;
-    this.modalState.isOpen = true;
-    
-    // Use modal scroll manager to prevent page tilt
-    ModalScrollManager.openModal();
-    
-    this.dispatchEvent(new CustomEvent('modal-opened', {
-      bubbles: true,
-      composed: true
-    }));
+    try {
+      this.modalState.previousActiveElement = document.activeElement as Element;
+      this.isModalOpen = true;
+      this.modalState.isOpen = true;
+      
+      // Use modal scroll manager to prevent page tilt
+      ModalScrollManager.openModal();
+      
+      // Create and activate focus trap
+      this.createFocusTrap();
+      
+      // Focus management after animation - focus on the first actionable button
+      setTimeout(() => {
+        this.activateFocusTrap(this.modalState.previousActiveElement || undefined);
+      }, 100);
+      
+      this.dispatchEvent(new CustomEvent('modal-opened', {
+        bubbles: true,
+        composed: true
+      }));
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'PasswordResetConfirmationModal',
+        method: 'open'
+      });
+    }
   }
 
   public close(): void {
-    this.isModalOpen = false;
-    this.modalState.isOpen = false;
-    
-    // Use modal scroll manager to restore scrolling
-    ModalScrollManager.closeModal();
-    
-    // Restore focus
-    if (this.modalState.previousActiveElement) {
-      (this.modalState.previousActiveElement as HTMLElement).focus();
+    try {
+      this.isModalOpen = false;
+      this.modalState.isOpen = false;
+      
+      // Deactivate focus trap first
+      this.deactivateFocusTrap();
+      
+      // Use modal scroll manager to restore scrolling
+      ModalScrollManager.closeModal();
+      
+      this.dispatchEvent(new CustomEvent('modal-closed', {
+        bubbles: true,
+        composed: true
+      }));
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'PasswordResetConfirmationModal',
+        method: 'close'
+      });
     }
-    
-    this.dispatchEvent(new CustomEvent('modal-closed', {
-      bubbles: true,
-      composed: true
-    }));
   }
 
   public reset(): void {
@@ -179,16 +216,31 @@ export class PasswordResetConfirmationModal extends LitElement implements ModalC
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    
+    // Clean up event listeners
     document.removeEventListener('keydown', this.handleKeyDown);
+    this.eventCleanupFunctions.forEach(cleanup => cleanup());
+    this.eventCleanupFunctions = [];
+    
     // Ensure modal scroll manager is cleaned up if modal is removed
     if (this.isModalOpen) {
       ModalScrollManager.closeModal();
     }
+    
+    // Deactivate focus trap
+    this.deactivateFocusTrap();
   }
 
   render() {
     return html`
-      <div class="modal-container" @click=${this.handleBackdropClick}>
+      <div 
+        class="modal-container" 
+        @click=${this.handleBackdropClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirmation-modal-title"
+        aria-describedby="confirmation-modal-description"
+      >
         <div class="modal-content bg-white rounded-2xl shadow-2xl" @click=${(e: Event) => e.stopPropagation()}>
           <!-- Header -->
           <div class="px-8 pt-8 pb-6 text-center">
@@ -213,18 +265,20 @@ export class PasswordResetConfirmationModal extends LitElement implements ModalC
               </div>
             </div>
             
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">
+            <h2 id="confirmation-modal-title" class="text-2xl font-bold text-gray-900 mb-4">
               Check your email
             </h2>
-            <p class="text-gray-600 mb-2">
-              We've sent a password reset link to:
-            </p>
-            <p class="text-lg font-semibold text-gray-900 mb-4">
-              ${this.email}
-            </p>
-            <p class="text-sm text-gray-500">
-              If you don't see the email, check your spam folder or try again with a different email address.
-            </p>
+            <div id="confirmation-modal-description">
+              <p class="text-gray-600 mb-2">
+                We've sent a password reset link to:
+              </p>
+              <p class="text-lg font-semibold text-gray-900 mb-4" aria-label="Email address: ${this.email}">
+                ${this.email}
+              </p>
+              <p class="text-sm text-gray-500">
+                If you don't see the email, check your spam folder or try again with a different email address.
+              </p>
+            </div>
           </div>
 
           <!-- Action Buttons -->
@@ -234,6 +288,7 @@ export class PasswordResetConfirmationModal extends LitElement implements ModalC
               type="button"
               @click=${this.handleOpenEmailApp}
               class="btn-primary w-full justify-center mb-4"
+              aria-describedby="email-app-description"
             >
               <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -253,16 +308,28 @@ export class PasswordResetConfirmationModal extends LitElement implements ModalC
                 }));
               }}
               class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 mb-4"
+              aria-describedby="resend-email-description"
             >
               Didn't receive the email? Resend
             </button>
 
+            <!-- Screen reader descriptions -->
+            <div class="sr-only">
+              <p id="email-app-description">
+                Opens your default email application to check for the password reset email
+              </p>
+              <p id="resend-email-description">
+                Sends another password reset email to ${this.email}
+              </p>
+            </div>
+            
             <!-- Back to Login Link -->
             <p class="text-center text-sm text-gray-600">
               <button
                 type="button"
                 @click=${this.handleBackToLogin}
                 class="text-blue-600 hover:text-blue-500 font-medium transition-colors"
+                aria-label="Go back to login modal"
               >
                 ← Back to login
               </button>

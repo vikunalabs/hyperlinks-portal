@@ -3,6 +3,9 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ref, createRef } from 'lit/directives/ref.js';
 import tailwindStyles from '../../style/main.css?inline';
 import { ModalScrollManager } from '../../utils/scrollbar';
+import { withFocusTrap } from '../../utils/focus-trap';
+import { FormValidator } from '../../utils/validation';
+import { ErrorHandler } from '../../utils/error-handler';
 
 // Define types locally to avoid import issues
 interface ModalComponent {
@@ -32,7 +35,7 @@ interface ModalCustomEvent<T = any> extends CustomEvent {
 }
 
 @customElement('register-modal')
-export class RegisterModal extends LitElement implements ModalComponent {
+export class RegisterModal extends withFocusTrap(LitElement) implements ModalComponent {
   static styles = [
     css`${unsafeCSS(tailwindStyles)}`,
     css`
@@ -129,6 +132,19 @@ export class RegisterModal extends LitElement implements ModalComponent {
         cursor: not-allowed;
         opacity: 0.5;
       }
+      
+      /* Screen reader only content */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
     `
   ];
 
@@ -161,12 +177,17 @@ export class RegisterModal extends LitElement implements ModalComponent {
 
   @state()
   private fieldErrors = {
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    acceptTerms: ''
+    username: [] as string[],
+    email: [] as string[],
+    password: [] as string[],
+    confirmPassword: [] as string[],
+    acceptTerms: [] as string[]
   };
+
+  @state()
+  private validationDebounceTimeouts = new Map<string, NodeJS.Timeout>();
+
+  private eventCleanupFunctions: Array<() => void> = [];
 
   private formRef = createRef<HTMLFormElement>();
   private firstInputRef = createRef<HTMLInputElement>();
@@ -176,42 +197,61 @@ export class RegisterModal extends LitElement implements ModalComponent {
   }
 
   public open(): void {
-    this.modalState.previousActiveElement = document.activeElement as Element;
-    this.isModalOpen = true;
-    this.modalState.isOpen = true;
-    
-    // Use modal scroll manager to prevent page tilt
-    ModalScrollManager.openModal();
-    
-    // Focus first input after animation
-    setTimeout(() => {
-      this.firstInputRef.value?.focus();
-    }, 100);
-    
-    this.dispatchEvent(new CustomEvent('modal-opened', {
-      bubbles: true,
-      composed: true
-    }));
+    try {
+      this.modalState.previousActiveElement = document.activeElement as Element;
+      this.isModalOpen = true;
+      this.modalState.isOpen = true;
+      
+      // Use modal scroll manager to prevent page tilt
+      ModalScrollManager.openModal();
+      
+      // Create and activate focus trap
+      this.createFocusTrap();
+      
+      // Focus management after animation
+      setTimeout(() => {
+        this.activateFocusTrap(this.modalState.previousActiveElement || undefined);
+        // Auto-focus first input field
+        if (this.firstInputRef.value) {
+          this.firstInputRef.value.focus();
+        }
+      }, 100);
+      
+      this.dispatchEvent(new CustomEvent('modal-opened', {
+        bubbles: true,
+        composed: true
+      }));
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'RegisterModal',
+        method: 'open'
+      });
+    }
   }
 
   public close(): void {
-    this.isModalOpen = false;
-    this.modalState.isOpen = false;
-    this.modalState.error = null;
-    this.resetForm();
-    
-    // Use modal scroll manager to restore scrolling
-    ModalScrollManager.closeModal();
-    
-    // Restore focus
-    if (this.modalState.previousActiveElement) {
-      (this.modalState.previousActiveElement as HTMLElement).focus();
+    try {
+      this.isModalOpen = false;
+      this.modalState.isOpen = false;
+      this.modalState.error = null;
+      this.resetForm();
+      
+      // Deactivate focus trap first
+      this.deactivateFocusTrap();
+      
+      // Use modal scroll manager to restore scrolling
+      ModalScrollManager.closeModal();
+      
+      this.dispatchEvent(new CustomEvent('modal-closed', {
+        bubbles: true,
+        composed: true
+      }));
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'RegisterModal',
+        method: 'close'
+      });
     }
-    
-    this.dispatchEvent(new CustomEvent('modal-closed', {
-      bubbles: true,
-      composed: true
-    }));
   }
 
   public reset(): void {
@@ -230,69 +270,59 @@ export class RegisterModal extends LitElement implements ModalComponent {
       acceptTerms: false
     };
     this.fieldErrors = {
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      acceptTerms: ''
+      username: [],
+      email: [],
+      password: [],
+      confirmPassword: [],
+      acceptTerms: []
     };
+    
+    // Clear any pending validation timeouts
+    this.validationDebounceTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.validationDebounceTimeouts.clear();
   }
 
   private validateForm(): boolean {
-    let isValid = true;
-    const errors = {
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      acceptTerms: ''
-    };
+    try {
+      // Use FormValidator utility with input trimming
+      const usernameResult = FormValidator.validateUsername(this.formData.username.trim());
+      const emailResult = FormValidator.validateEmail(this.formData.email.trim());
+      const passwordResult = FormValidator.validatePassword(this.formData.password);
 
-    // Username validation
-    if (!this.formData.username.trim()) {
-      errors.username = 'Username is required';
-      isValid = false;
-    } else if (this.formData.username.length < 3) {
-      errors.username = 'Username must be at least 3 characters';
-      isValid = false;
+      // Confirm password validation
+      const confirmPasswordErrors: string[] = [];
+      if (!this.formData.confirmPassword) {
+        confirmPasswordErrors.push('Please confirm your password');
+      } else if (this.formData.password !== this.formData.confirmPassword) {
+        confirmPasswordErrors.push('Passwords do not match');
+      }
+
+      // Terms validation
+      const termsErrors: string[] = [];
+      if (!this.formData.acceptTerms) {
+        termsErrors.push('You must accept the terms and conditions');
+      }
+
+      this.fieldErrors = {
+        username: usernameResult.errors,
+        email: emailResult.errors,
+        password: passwordResult.errors,
+        confirmPassword: confirmPasswordErrors,
+        acceptTerms: termsErrors
+      };
+
+      return usernameResult.isValid && 
+             emailResult.isValid && 
+             passwordResult.isValid && 
+             confirmPasswordErrors.length === 0 && 
+             termsErrors.length === 0;
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'RegisterModal',
+        method: 'validateForm'
+      });
+      return false;
     }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!this.formData.email.trim()) {
-      errors.email = 'Email is required';
-      isValid = false;
-    } else if (!emailRegex.test(this.formData.email)) {
-      errors.email = 'Please enter a valid email address';
-      isValid = false;
-    }
-
-    // Password validation
-    if (!this.formData.password) {
-      errors.password = 'Password is required';
-      isValid = false;
-    } else if (this.formData.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
-      isValid = false;
-    }
-
-    // Confirm password validation
-    if (!this.formData.confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password';
-      isValid = false;
-    } else if (this.formData.password !== this.formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-      isValid = false;
-    }
-
-    // Terms validation
-    if (!this.formData.acceptTerms) {
-      errors.acceptTerms = 'You must accept the terms and conditions';
-      isValid = false;
-    }
-
-    this.fieldErrors = errors;
-    return isValid;
   }
 
   private isFormValid(): boolean {
@@ -311,19 +341,32 @@ export class RegisterModal extends LitElement implements ModalComponent {
 
   private handleInputChange(field: keyof typeof this.formData) {
     return (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      if (field === 'acceptTerms') {
-        this.formData[field] = target.checked;
-      } else {
-        this.formData[field] = target.value;
+      try {
+        const target = e.target as HTMLInputElement;
+        
+        if (field === 'acceptTerms') {
+          this.formData[field] = target.checked;
+        } else {
+          // Apply input trimming for text fields
+          this.formData[field] = target.value.trim();
+        }
+        
+        // Clear field errors when user starts typing
+        this.fieldErrors[field as keyof typeof this.fieldErrors] = [];
+        
+        // Debounced real-time validation for text fields
+        if (field !== 'acceptTerms') {
+          this.debounceValidation(field, target.value);
+        }
+        
+        this.requestUpdate();
+      } catch (error) {
+        ErrorHandler.getInstance().handleError(error as Error, {
+          component: 'RegisterModal',
+          method: 'handleInputChange',
+          field
+        });
       }
-      
-      // Clear field error when user starts typing
-      if (field in this.fieldErrors) {
-        this.fieldErrors[field as keyof typeof this.fieldErrors] = '';
-      }
-      
-      this.requestUpdate();
     };
   }
 
@@ -409,6 +452,58 @@ export class RegisterModal extends LitElement implements ModalComponent {
     window.open('/privacy.html', '_blank');
   };
 
+  private debounceValidation(field: keyof typeof this.formData, value: string): void {
+    // Clear existing timeout for this field
+    const existingTimeout = this.validationDebounceTimeouts.get(field);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    // Set new timeout for validation
+    const timeoutId = setTimeout(() => {
+      this.validateSingleField(field, value);
+    }, 300);
+
+    this.validationDebounceTimeouts.set(field, timeoutId);
+  }
+
+  private validateSingleField(field: keyof typeof this.formData, value: string): void {
+    try {
+      if (field === 'username') {
+        const result = FormValidator.validateUsername(value.trim());
+        this.fieldErrors.username = result.errors;
+      } else if (field === 'email') {
+        const result = FormValidator.validateEmail(value.trim());
+        this.fieldErrors.email = result.errors;
+      } else if (field === 'password') {
+        const result = FormValidator.validatePassword(value);
+        this.fieldErrors.password = result.errors;
+        
+        // Also validate confirm password if it has a value
+        if (this.formData.confirmPassword) {
+          if (value !== this.formData.confirmPassword) {
+            this.fieldErrors.confirmPassword = ['Passwords do not match'];
+          } else {
+            this.fieldErrors.confirmPassword = [];
+          }
+        }
+      } else if (field === 'confirmPassword') {
+        if (value !== this.formData.password) {
+          this.fieldErrors.confirmPassword = ['Passwords do not match'];
+        } else {
+          this.fieldErrors.confirmPassword = [];
+        }
+      }
+      this.requestUpdate();
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'RegisterModal',
+        method: 'validateSingleField',
+        field
+      });
+    }
+  }
+
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener('keydown', this.handleKeyDown);
@@ -416,21 +511,40 @@ export class RegisterModal extends LitElement implements ModalComponent {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    
+    // Clean up event listeners
     document.removeEventListener('keydown', this.handleKeyDown);
+    this.eventCleanupFunctions.forEach(cleanup => cleanup());
+    this.eventCleanupFunctions = [];
+    
+    // Clear validation timeouts
+    this.validationDebounceTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.validationDebounceTimeouts.clear();
+    
     // Ensure modal scroll manager is cleaned up if modal is removed
     if (this.isModalOpen) {
       ModalScrollManager.closeModal();
     }
+    
+    // Deactivate focus trap
+    this.deactivateFocusTrap();
   }
 
   render() {
     return html`
-      <div class="modal-container" @click=${this.handleBackdropClick}>
+      <div 
+        class="modal-container" 
+        @click=${this.handleBackdropClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="register-modal-title"
+        aria-describedby="register-modal-description"
+      >
         <div class="modal-content bg-white rounded-2xl shadow-2xl" @click=${(e: Event) => e.stopPropagation()}>
           <!-- Header -->
           <div class="px-8 pt-8 pb-6">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-2xl font-bold text-gray-900">
+              <h2 id="register-modal-title" class="text-2xl font-bold text-gray-900">
                 Create your account
               </h2>
               <button 
@@ -443,24 +557,36 @@ export class RegisterModal extends LitElement implements ModalComponent {
                 </svg>
               </button>
             </div>
-            <p class="text-gray-600">
+            <p id="register-modal-description" class="text-gray-600">
               Join thousands of users managing their links efficiently
             </p>
           </div>
 
           <!-- Form -->
-          <form ${ref(this.formRef)} @submit=${this.handleSubmit} class="px-8 pb-8">
-            <!-- Error Display -->
-            ${this.modalState.error ? html`
-              <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p class="text-sm text-red-700">${this.modalState.error}</p>
+          <form 
+            ${ref(this.formRef)} 
+            @submit=${this.handleSubmit} 
+            class="px-8 pb-8"
+            novalidate
+          >
+            <!-- Live Region for Dynamic Updates -->
+            <div aria-live="polite" aria-atomic="true">
+              <!-- Error Display -->
+              ${this.modalState.error ? html`
+                <div 
+                  class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
+                  role="alert"
+                  aria-describedby="register-error-message"
+                >
+                  <div class="flex items-center">
+                    <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p id="register-error-message" class="text-sm text-red-700">${this.modalState.error}</p>
+                  </div>
                 </div>
-              </div>
-            ` : ''}
+              ` : ''}
+            </div>
 
             <!-- Username Field -->
             <div class="input-group mb-4">
@@ -473,12 +599,20 @@ export class RegisterModal extends LitElement implements ModalComponent {
                 id="username"
                 .value=${this.formData.username}
                 @input=${this.handleInputChange('username')}
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.username ? 'input-error' : ''}"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.username.length > 0 ? 'input-error' : ''}"
                 placeholder="Choose a username"
                 ?disabled=${this.modalState.isLoading}
+                aria-required="true"
+                aria-invalid=${this.fieldErrors.username.length > 0 ? 'true' : 'false'}
+                aria-describedby=${this.fieldErrors.username.length > 0 ? 'username-error' : ''}
+                autocomplete="username"
               />
-              ${this.fieldErrors.username ? html`
-                <p class="mt-1 text-sm text-red-600">${this.fieldErrors.username}</p>
+              ${this.fieldErrors.username.length > 0 ? html`
+                <div id="username-error" role="alert" aria-live="polite">
+                  ${this.fieldErrors.username.map(error => html`
+                    <p class="mt-1 text-sm text-red-600">${error}</p>
+                  `)}
+                </div>
               ` : ''}
             </div>
 
@@ -492,12 +626,20 @@ export class RegisterModal extends LitElement implements ModalComponent {
                 id="email"
                 .value=${this.formData.email}
                 @input=${this.handleInputChange('email')}
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.email ? 'input-error' : ''}"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.email.length > 0 ? 'input-error' : ''}"
                 placeholder="Enter your email address"
                 ?disabled=${this.modalState.isLoading}
+                aria-required="true"
+                aria-invalid=${this.fieldErrors.email.length > 0 ? 'true' : 'false'}
+                aria-describedby=${this.fieldErrors.email.length > 0 ? 'email-error' : ''}
+                autocomplete="email"
               />
-              ${this.fieldErrors.email ? html`
-                <p class="mt-1 text-sm text-red-600">${this.fieldErrors.email}</p>
+              ${this.fieldErrors.email.length > 0 ? html`
+                <div id="email-error" role="alert" aria-live="polite">
+                  ${this.fieldErrors.email.map(error => html`
+                    <p class="mt-1 text-sm text-red-600">${error}</p>
+                  `)}
+                </div>
               ` : ''}
             </div>
 
@@ -512,15 +654,22 @@ export class RegisterModal extends LitElement implements ModalComponent {
                   id="register-password"
                   .value=${this.formData.password}
                   @input=${this.handleInputChange('password')}
-                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.password ? 'input-error' : ''}"
+                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.password.length > 0 ? 'input-error' : ''}"
                   placeholder="Create a strong password"
                   ?disabled=${this.modalState.isLoading}
+                  aria-required="true"
+                  aria-invalid=${this.fieldErrors.password.length > 0 ? 'true' : 'false'}
+                  aria-describedby=${this.fieldErrors.password.length > 0 ? 'register-password-error' : 'register-password-toggle'}
+                  autocomplete="new-password"
                 />
                 <button
                   type="button"
                   @click=${this.togglePasswordVisibility}
                   class="password-toggle"
                   ?disabled=${this.modalState.isLoading}
+                  id="register-password-toggle"
+                  aria-label=${this.showPassword ? 'Hide password' : 'Show password'}
+                  aria-describedby="register-password"
                 >
                   ${this.showPassword ? html`
                     <!-- Eye open (password visible, click to hide) -->
@@ -536,8 +685,12 @@ export class RegisterModal extends LitElement implements ModalComponent {
                   `}
                 </button>
               </div>
-              ${this.fieldErrors.password ? html`
-                <p class="mt-1 text-sm text-red-600">${this.fieldErrors.password}</p>
+              ${this.fieldErrors.password.length > 0 ? html`
+                <div id="register-password-error" role="alert" aria-live="polite">
+                  ${this.fieldErrors.password.map(error => html`
+                    <p class="mt-1 text-sm text-red-600">${error}</p>
+                  `)}
+                </div>
               ` : ''}
             </div>
 
@@ -552,15 +705,22 @@ export class RegisterModal extends LitElement implements ModalComponent {
                   id="confirm-password"
                   .value=${this.formData.confirmPassword}
                   @input=${this.handleInputChange('confirmPassword')}
-                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.confirmPassword ? 'input-error' : ''}"
+                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.confirmPassword.length > 0 ? 'input-error' : ''}"
                   placeholder="Confirm your password"
                   ?disabled=${this.modalState.isLoading}
+                  aria-required="true"
+                  aria-invalid=${this.fieldErrors.confirmPassword.length > 0 ? 'true' : 'false'}
+                  aria-describedby=${this.fieldErrors.confirmPassword.length > 0 ? 'confirm-password-error' : 'confirm-password-toggle'}
+                  autocomplete="new-password"
                 />
                 <button
                   type="button"
                   @click=${this.toggleConfirmPasswordVisibility}
                   class="password-toggle"
                   ?disabled=${this.modalState.isLoading}
+                  id="confirm-password-toggle"
+                  aria-label=${this.showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  aria-describedby="confirm-password"
                 >
                   ${this.showConfirmPassword ? html`
                     <!-- Eye open (password visible, click to hide) -->
@@ -576,8 +736,12 @@ export class RegisterModal extends LitElement implements ModalComponent {
                   `}
                 </button>
               </div>
-              ${this.fieldErrors.confirmPassword ? html`
-                <p class="mt-1 text-sm text-red-600">${this.fieldErrors.confirmPassword}</p>
+              ${this.fieldErrors.confirmPassword.length > 0 ? html`
+                <div id="confirm-password-error" role="alert" aria-live="polite">
+                  ${this.fieldErrors.confirmPassword.map(error => html`
+                    <p class="mt-1 text-sm text-red-600">${error}</p>
+                  `)}
+                </div>
               ` : ''}
             </div>
 
@@ -594,6 +758,7 @@ export class RegisterModal extends LitElement implements ModalComponent {
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="Your company or organization"
                 ?disabled=${this.modalState.isLoading}
+                autocomplete="organization"
               />
             </div>
 
@@ -602,10 +767,14 @@ export class RegisterModal extends LitElement implements ModalComponent {
               <label class="flex items-start">
                 <input
                   type="checkbox"
+                  id="accept-terms"
                   .checked=${this.formData.acceptTerms}
                   @change=${this.handleInputChange('acceptTerms')}
                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
                   ?disabled=${this.modalState.isLoading}
+                  aria-required="true"
+                  aria-invalid=${this.fieldErrors.acceptTerms.length > 0 ? 'true' : 'false'}
+                  aria-describedby=${this.fieldErrors.acceptTerms.length > 0 ? 'accept-terms-error' : ''}
                 />
                 <span class="ml-2 text-sm text-gray-600">
                   I agree to the 
@@ -614,8 +783,12 @@ export class RegisterModal extends LitElement implements ModalComponent {
                   <a href="#" @click=${this.handlePrivacyClick} class="text-blue-600 hover:text-blue-500">Privacy Policy</a>
                 </span>
               </label>
-              ${this.fieldErrors.acceptTerms ? html`
-                <p class="mt-1 text-sm text-red-600">${this.fieldErrors.acceptTerms}</p>
+              ${this.fieldErrors.acceptTerms.length > 0 ? html`
+                <div id="accept-terms-error" role="alert" aria-live="polite">
+                  ${this.fieldErrors.acceptTerms.map(error => html`
+                    <p class="mt-1 text-sm text-red-600">${error}</p>
+                  `)}
+                </div>
               ` : ''}
             </div>
 

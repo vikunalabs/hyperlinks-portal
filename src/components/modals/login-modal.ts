@@ -3,6 +3,9 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ref, createRef } from 'lit/directives/ref.js';
 import tailwindStyles from '../../style/main.css?inline';
 import { ModalScrollManager } from '../../utils/scrollbar';
+import { withFocusTrap } from '../../utils/focus-trap';
+import { FormValidator } from '../../utils/validation';
+import { ErrorHandler } from '../../utils/error-handler';
 // Define types locally for now to avoid import issues
 interface ModalComponent {
   open(): void;
@@ -29,7 +32,7 @@ interface ModalCustomEvent<T = any> extends CustomEvent {
 }
 
 @customElement('login-modal')
-export class LoginModal extends LitElement implements ModalComponent {
+export class LoginModal extends withFocusTrap(LitElement) implements ModalComponent {
   static styles = [
     css`${unsafeCSS(tailwindStyles)}`,
     css`
@@ -126,6 +129,19 @@ export class LoginModal extends LitElement implements ModalComponent {
         cursor: not-allowed;
         opacity: 0.5;
       }
+      
+      /* Screen reader only content */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
     `
   ];
 
@@ -152,9 +168,14 @@ export class LoginModal extends LitElement implements ModalComponent {
 
   @state()
   private fieldErrors = {
-    usernameOrEmail: '',
-    password: ''
+    usernameOrEmail: [] as string[],
+    password: [] as string[]
   };
+
+  @state()
+  private validationDebounceTimeouts = new Map<string, NodeJS.Timeout>();
+
+  private eventCleanupFunctions: Array<() => void> = [];
 
   private formRef = createRef<HTMLFormElement>();
   private firstInputRef = createRef<HTMLInputElement>();
@@ -164,42 +185,63 @@ export class LoginModal extends LitElement implements ModalComponent {
   }
 
   public open(): void {
-    this.modalState.previousActiveElement = document.activeElement as Element;
-    this.isModalOpen = true;
-    this.modalState.isOpen = true;
-    
-    // Use modal scroll manager to prevent page tilt
-    ModalScrollManager.openModal();
-    
-    // Focus first input after animation
-    setTimeout(() => {
-      this.firstInputRef.value?.focus();
-    }, 100);
-    
-    this.dispatchEvent(new CustomEvent('modal-opened', {
-      bubbles: true,
-      composed: true
-    }));
+    try {
+      this.modalState.previousActiveElement = document.activeElement as Element;
+      this.isModalOpen = true;
+      this.modalState.isOpen = true;
+      
+      // Use modal scroll manager to prevent page tilt
+      ModalScrollManager.openModal();
+      
+      // Create and activate focus trap
+      this.createFocusTrap();
+      
+      // Focus management after animation
+      setTimeout(() => {
+        this.activateFocusTrap(this.modalState.previousActiveElement || undefined);
+        // Ensure first input gets focus
+        setTimeout(() => {
+          if (this.firstInputRef.value) {
+            this.firstInputRef.value.focus();
+          }
+        }, 50);
+      }, 100);
+      
+      this.dispatchEvent(new CustomEvent('modal-opened', {
+        bubbles: true,
+        composed: true
+      }));
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'LoginModal',
+        method: 'open'
+      });
+    }
   }
 
   public close(): void {
-    this.isModalOpen = false;
-    this.modalState.isOpen = false;
-    this.modalState.error = null;
-    this.resetForm();
-    
-    // Use modal scroll manager to restore scrolling
-    ModalScrollManager.closeModal();
-    
-    // Restore focus
-    if (this.modalState.previousActiveElement) {
-      (this.modalState.previousActiveElement as HTMLElement).focus();
+    try {
+      this.isModalOpen = false;
+      this.modalState.isOpen = false;
+      this.modalState.error = null;
+      this.resetForm();
+      
+      // Deactivate focus trap first
+      this.deactivateFocusTrap();
+      
+      // Use modal scroll manager to restore scrolling
+      ModalScrollManager.closeModal();
+      
+      this.dispatchEvent(new CustomEvent('modal-closed', {
+        bubbles: true,
+        composed: true
+      }));
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'LoginModal',
+        method: 'close'
+      });
     }
-    
-    this.dispatchEvent(new CustomEvent('modal-closed', {
-      bubbles: true,
-      composed: true
-    }));
   }
 
   public reset(): void {
@@ -215,30 +257,37 @@ export class LoginModal extends LitElement implements ModalComponent {
       rememberMe: false
     };
     this.fieldErrors = {
-      usernameOrEmail: '',
-      password: ''
+      usernameOrEmail: [],
+      password: []
     };
+    
+    // Clear any pending validation timeouts
+    this.validationDebounceTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.validationDebounceTimeouts.clear();
   }
 
   private validateForm(): boolean {
-    let isValid = true;
-    const errors = { usernameOrEmail: '', password: '' };
+    try {
+      // Use FormValidator utility with input trimming
+      const usernameEmailResult = FormValidator.validateUsernameOrEmail(this.formData.usernameOrEmail.trim());
+      const passwordResult = FormValidator.validateField(this.formData.password, {
+        required: true,
+        minLength: 8
+      });
 
-    if (!this.formData.usernameOrEmail.trim()) {
-      errors.usernameOrEmail = 'Username or email is required';
-      isValid = false;
+      this.fieldErrors = {
+        usernameOrEmail: usernameEmailResult.errors,
+        password: passwordResult.errors
+      };
+
+      return usernameEmailResult.isValid && passwordResult.isValid;
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'LoginModal',
+        method: 'validateForm'
+      });
+      return false;
     }
-
-    if (!this.formData.password) {
-      errors.password = 'Password is required';
-      isValid = false;
-    } else if (this.formData.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
-      isValid = false;
-    }
-
-    this.fieldErrors = errors;
-    return isValid;
   }
 
   private isFormValid(): boolean {
@@ -251,19 +300,32 @@ export class LoginModal extends LitElement implements ModalComponent {
 
   private handleInputChange(field: keyof typeof this.formData) {
     return (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      if (field === 'rememberMe') {
-        this.formData[field] = target.checked;
-      } else {
-        this.formData[field] = target.value;
+      try {
+        const target = e.target as HTMLInputElement;
+        
+        if (field === 'rememberMe') {
+          this.formData[field] = target.checked;
+        } else {
+          // Apply input trimming for text fields
+          this.formData[field] = target.value.trim();
+        }
+        
+        // Clear field errors when user starts typing
+        if (field in this.fieldErrors && field !== 'rememberMe') {
+          this.fieldErrors[field as keyof typeof this.fieldErrors] = [];
+        }
+        
+        // Debounced real-time validation
+        this.debounceValidation(field, target.value);
+        
+        this.requestUpdate();
+      } catch (error) {
+        ErrorHandler.getInstance().handleError(error as Error, {
+          component: 'LoginModal',
+          method: 'handleInputChange',
+          field
+        });
       }
-      
-      // Clear field error when user starts typing
-      if (field in this.fieldErrors) {
-        this.fieldErrors[field as keyof typeof this.fieldErrors] = '';
-      }
-      
-      this.requestUpdate();
     };
   }
 
@@ -344,23 +406,79 @@ export class LoginModal extends LitElement implements ModalComponent {
     document.addEventListener('keydown', this.handleKeyDown);
   }
 
+  private debounceValidation(field: keyof typeof this.formData, value: string): void {
+    // Clear existing timeout for this field
+    const existingTimeout = this.validationDebounceTimeouts.get(field);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    // Set new timeout for validation
+    const timeoutId = setTimeout(() => {
+      this.validateSingleField(field, value);
+    }, 300);
+
+    this.validationDebounceTimeouts.set(field, timeoutId);
+  }
+
+  private validateSingleField(field: keyof typeof this.formData, value: string): void {
+    try {
+      if (field === 'usernameOrEmail') {
+        const result = FormValidator.validateUsernameOrEmail(value.trim());
+        this.fieldErrors.usernameOrEmail = result.errors;
+      } else if (field === 'password') {
+        const result = FormValidator.validateField(value, {
+          required: true,
+          minLength: 8
+        });
+        this.fieldErrors.password = result.errors;
+      }
+      this.requestUpdate();
+    } catch (error) {
+      ErrorHandler.getInstance().handleError(error as Error, {
+        component: 'LoginModal',
+        method: 'validateSingleField',
+        field
+      });
+    }
+  }
+
   disconnectedCallback() {
     super.disconnectedCallback();
+    
+    // Clean up event listeners
     document.removeEventListener('keydown', this.handleKeyDown);
+    this.eventCleanupFunctions.forEach(cleanup => cleanup());
+    this.eventCleanupFunctions = [];
+    
+    // Clear validation timeouts
+    this.validationDebounceTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.validationDebounceTimeouts.clear();
+    
     // Ensure modal scroll manager is cleaned up if modal is removed
     if (this.isModalOpen) {
       ModalScrollManager.closeModal();
     }
+    
+    // Deactivate focus trap
+    this.deactivateFocusTrap();
   }
 
   render() {
     return html`
-      <div class="modal-container" @click=${this.handleBackdropClick}>
+      <div 
+        class="modal-container" 
+        @click=${this.handleBackdropClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-modal-title"
+        aria-describedby="login-modal-description"
+      >
         <div class="modal-content bg-white rounded-2xl shadow-2xl" @click=${(e: Event) => e.stopPropagation()}>
             <!-- Header -->
             <div class="px-8 pt-8 pb-6">
               <div class="flex items-center justify-between mb-4">
-                <h2 class="text-2xl font-bold text-gray-900">
+                <h2 id="login-modal-title" class="text-2xl font-bold text-gray-900">
                   Welcome back
                 </h2>
                 <button 
@@ -373,24 +491,36 @@ export class LoginModal extends LitElement implements ModalComponent {
                   </svg>
                 </button>
               </div>
-              <p class="text-gray-600">
+              <p id="login-modal-description" class="text-gray-600">
                 Sign in to your account to continue
               </p>
             </div>
 
             <!-- Form -->
-            <form ${ref(this.formRef)} @submit=${this.handleSubmit} class="px-8 pb-8">
-              <!-- Error Display -->
-              ${this.modalState.error ? html`
-                <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div class="flex items-center">
-                    <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p class="text-sm text-red-700">${this.modalState.error}</p>
+            <form 
+              ${ref(this.formRef)} 
+              @submit=${this.handleSubmit} 
+              class="px-8 pb-8"
+              novalidate
+            >
+              <!-- Live Region for Dynamic Updates -->
+              <div aria-live="polite" aria-atomic="true">
+                <!-- Error Display -->
+                ${this.modalState.error ? html`
+                  <div 
+                    class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
+                    role="alert"
+                    aria-describedby="login-error-message"
+                  >
+                    <div class="flex items-center">
+                      <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p id="login-error-message" class="text-sm text-red-700">${this.modalState.error}</p>
+                    </div>
                   </div>
-                </div>
-              ` : ''}
+                ` : ''}
+              </div>
 
               <!-- Username/Email Field -->
               <div class="input-group mb-4">
@@ -401,14 +531,23 @@ export class LoginModal extends LitElement implements ModalComponent {
                   ${ref(this.firstInputRef)}
                   type="text"
                   id="usernameOrEmail"
+                  name="usernameOrEmail"
                   .value=${this.formData.usernameOrEmail}
                   @input=${this.handleInputChange('usernameOrEmail')}
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.usernameOrEmail ? 'input-error' : ''}"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.usernameOrEmail.length > 0 ? 'input-error' : ''}"
                   placeholder="Enter your username or email"
                   ?disabled=${this.modalState.isLoading}
+                  aria-required="true"
+                  aria-invalid=${this.fieldErrors.usernameOrEmail.length > 0 ? 'true' : 'false'}
+                  aria-describedby=${this.fieldErrors.usernameOrEmail.length > 0 ? 'usernameOrEmail-error' : ''}
+                  autocomplete="username"
                 />
-                ${this.fieldErrors.usernameOrEmail ? html`
-                  <p class="mt-1 text-sm text-red-600">${this.fieldErrors.usernameOrEmail}</p>
+                ${this.fieldErrors.usernameOrEmail.length > 0 ? html`
+                  <div id="usernameOrEmail-error" role="alert" aria-live="polite">
+                    ${this.fieldErrors.usernameOrEmail.map(error => html`
+                      <p class="mt-1 text-sm text-red-600">${error}</p>
+                    `)}
+                  </div>
                 ` : ''}
               </div>
 
@@ -421,17 +560,25 @@ export class LoginModal extends LitElement implements ModalComponent {
                   <input
                     type=${this.showPassword ? 'text' : 'password'}
                     id="password"
+                    name="password"
                     .value=${this.formData.password}
                     @input=${this.handleInputChange('password')}
-                    class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.password ? 'input-error' : ''}"
+                    class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.password.length > 0 ? 'input-error' : ''}"
                     placeholder="Enter your password"
                     ?disabled=${this.modalState.isLoading}
+                    aria-required="true"
+                    aria-invalid=${this.fieldErrors.password.length > 0 ? 'true' : 'false'}
+                    aria-describedby=${this.fieldErrors.password.length > 0 ? 'password-error password-toggle-desc' : 'password-toggle-desc'}
+                    autocomplete="current-password"
                   />
                   <button
                     type="button"
                     @click=${this.togglePasswordVisibility}
                     class="password-toggle"
                     ?disabled=${this.modalState.isLoading}
+                    aria-label=${this.showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed=${this.showPassword ? 'true' : 'false'}
+                    aria-describedby="password-toggle-desc"
                   >
                     ${this.showPassword ? html`
                       <!-- Eye open (password visible, click to hide) -->
@@ -447,8 +594,15 @@ export class LoginModal extends LitElement implements ModalComponent {
                     `}
                   </button>
                 </div>
-                ${this.fieldErrors.password ? html`
-                  <p class="mt-1 text-sm text-red-600">${this.fieldErrors.password}</p>
+                <div id="password-toggle-desc" class="sr-only">
+                  Password visibility toggle. Current state: ${this.showPassword ? 'visible' : 'hidden'}
+                </div>
+                ${this.fieldErrors.password.length > 0 ? html`
+                  <div id="password-error" role="alert" aria-live="polite">
+                    ${this.fieldErrors.password.map(error => html`
+                      <p class="mt-1 text-sm text-red-600">${error}</p>
+                    `)}
+                  </div>
                 ` : ''}
               </div>
 
