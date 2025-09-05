@@ -71,6 +71,21 @@ export class CollapsibleSidebar extends LitElement {
         transition: all 0.2s ease-in-out;
         cursor: pointer;
       }
+
+      .logout-btn {
+        color: var(--color-text);
+        border-color: var(--color-error);
+        border-width: 1px;
+        border-style: solid;
+        opacity: 0.7;
+      }
+
+      .logout-btn:hover {
+        background-color: var(--color-error);
+        border-color: var(--color-error);
+        color: white;
+        opacity: 1;
+      }
       
       .nav-item:hover {
         background-color: rgba(249, 250, 251, 1);
@@ -162,6 +177,13 @@ export class CollapsibleSidebar extends LitElement {
     console.log('Settings clicked');
   }
 
+  private handleLogoutClick() {
+    console.log('Logout clicked');
+    // Here you would typically call your auth service logout
+    // For now, just redirect to home page
+    window.location.href = '/';
+  }
+
   private getSvgIcon(iconName: string) {
     const icons: Record<string, any> = {
       'fas fa-home': html`<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>`,
@@ -190,7 +212,8 @@ export class CollapsibleSidebar extends LitElement {
       'fas fa-book': html`<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>`,
       'fas fa-comments': html`<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/><path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/></svg>`,
       'fas fa-cog': html`<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>`,
-      'fas fa-chevron-down': html`<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>`
+      'fas fa-chevron-down': html`<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>`,
+      'fas fa-sign-out-alt': html`<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 01-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>`
     };
     return icons[iconName] || html`<div class="w-5 h-5"></div>`;
   }
@@ -298,16 +321,20 @@ export class CollapsibleSidebar extends LitElement {
             <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold" style="background-color: var(--color-primary);">
               ${this.userProfile.initials}
             </div>
-            <div class="ml-3">
+            <div class="ml-3 flex-1">
               <p class="text-sm font-medium">${this.userProfile.name}</p>
               <p class="text-xs text-gray-500">${this.userProfile.plan} Plan</p>
             </div>
-            <button 
-              class="ml-auto text-gray-400 hover:text-gray-600"
-              @click=${this.handleSettingsClick}
-            >
-              ${this.getSvgIcon('fas fa-cog')}
-            </button>
+            <div class="flex items-center space-x-2">
+              <button class="logout-btn group flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 border"
+                     @click=${this.handleLogoutClick}
+                      title="Logout"
+                    >
+                      ${this.getSvgIcon('fas fa-sign-out-alt')}
+                      <span>Logout</span>
+                   </button>
+
+            </div>
           </div>
         </div>
       </aside>
