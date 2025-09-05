@@ -1,8 +1,8 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
 import { customElement } from 'lit/decorators.js';
-import tailwindStyles from '../style/main.css?inline';
-import './common/app-navbar';
-import './common/app-footer';
+import tailwindStyles from '@/style/main.css?inline';
+import '@components/common/app-navbar';
+import '@components/common/app-footer';
 
 @customElement('privacy-page')
 export class PrivacyPage extends LitElement {

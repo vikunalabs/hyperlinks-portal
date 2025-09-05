@@ -1,14 +1,14 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { ref, createRef } from 'lit/directives/ref.js';
-import tailwindStyles from '../style/main.css?inline';
-import './common/app-navbar';
-import './common/app-footer';
-import './modals/login-modal';
-import './modals/register-modal';
-import './modals/forgot-password-modal';
-import './modals/password-reset-confirmation-modal';
-import type { NavbarButton } from './common/app-navbar';
+import tailwindStyles from '@/style/main.css?inline';
+import '@components/common/app-navbar';
+import '@components/common/app-footer';
+import '@components/modals/login-modal';
+import '@components/modals/register-modal';
+import '@components/modals/forgot-password-modal';
+import '@components/modals/password-reset-confirmation-modal';
+import type { NavbarButton } from '@components/common/app-navbar';
 
 @customElement('home-page')
 export class HomePage extends LitElement {

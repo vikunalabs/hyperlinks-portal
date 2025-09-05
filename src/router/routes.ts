@@ -1,5 +1,18 @@
 // Route definitions and configuration
 
+// Import page components
+import '@components/pages/protected/dashboard-page';
+import '@components/pages/public/home-page';
+import '@components/pages/protected/mylinks-page';
+
+// Utility function to render pages
+function renderPage(componentTag: string) {
+  const appContainer = document.getElementById('app');
+  if (appContainer) {
+    appContainer.innerHTML = `<${componentTag}></${componentTag}>`;
+  }
+}
+
 export interface RouteConfig {
   path: string;
   handler: () => void;
@@ -15,38 +28,48 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password/:token',
   CONFIRM_ACCOUNT: '/confirm-account/:token',
-  RESEND_VERIFICATION: '/resend-verification'
+  RESEND_VERIFICATION: '/resend-verification',
+  DASHBOARD: '/dashboard',
+  LINKS: '/links'
 } as const;
 
-// Route handlers - placeholder functions that will be implemented with page components
+// Route handlers - page component rendering
 const routeHandlers = {
   home: () => {
-    console.log('[Router] Navigating to Dashboard');
-    // TODO: Render DashboardPage component
+    console.log('[Router] Navigating to Home');
+    renderPage('home-page');
   },
   login: () => {
     console.log('[Router] Navigating to Login');
-    // TODO: Render LoginPage component
+    renderPage('home-page');
   },
   register: () => {
     console.log('[Router] Navigating to Register');
-    // TODO: Render RegisterPage component
+    renderPage('home-page');
   },
   forgotPassword: () => {
     console.log('[Router] Navigating to Forgot Password');
-    // TODO: Render ForgotPasswordPage component
+    renderPage('home-page');
   },
   resetPassword: () => {
     console.log('[Router] Navigating to Reset Password');
-    // TODO: Render ResetPasswordPage component
+    renderPage('home-page');
   },
   confirmAccount: () => {
     console.log('[Router] Navigating to Confirm Account');
-    // TODO: Render ConfirmAccountPage component
+    renderPage('home-page');
   },
   resendVerification: () => {
     console.log('[Router] Navigating to Resend Verification');
-    // TODO: Render ResendVerificationPage component
+    renderPage('home-page');
+  },
+  dashboard: () => {
+    console.log('[Router] Navigating to Dashboard');
+    renderPage('dashboard-page');
+  },
+  links: () => {
+    console.log('[Router] Navigating to Links');
+    renderPage('mylinks-page');
   }
 };
 
@@ -55,7 +78,7 @@ export const routes: RouteConfig[] = [
   {
     path: ROUTES.HOME,
     handler: routeHandlers.home,
-    protected: true,
+    protected: false,
     title: 'Dashboard'
   },
   {
@@ -93,5 +116,17 @@ export const routes: RouteConfig[] = [
     handler: routeHandlers.resendVerification,
     protected: false,
     title: 'Resend Verification'
-  }
+  },
+  {
+    path: ROUTES.DASHBOARD,
+    handler: routeHandlers.dashboard,
+    protected: false,
+    title: 'Dashboard'
+  },
+  {
+    path: ROUTES.LINKS,
+    handler: routeHandlers.links,
+    protected: false,
+    title: 'My Links'
+  },
 ];

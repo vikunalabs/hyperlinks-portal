@@ -108,7 +108,7 @@ export class AppRouter {
     }
 
     // Execute guard and handle redirection
-    const canActivate = await AuthGuard.executeGuard(guardResult);
+    const canActivate = await AuthGuard.executeGuard(guardResult, this);
     if (!canActivate) {
       return; // Guard handled the redirection
     }

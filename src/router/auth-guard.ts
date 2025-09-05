@@ -2,7 +2,7 @@
 
 import { authStore } from '../stores/auth.store';
 import { appStore } from '../stores/app.store';
-import { appRouter, ROUTES } from './index';
+import { ROUTES } from './routes';
 
 export interface GuardResult {
   canActivate: boolean;
@@ -62,7 +62,7 @@ export class AuthGuard {
   /**
    * Execute guard and handle redirection
    */
-  static async executeGuard(guardResult: GuardResult): Promise<boolean> {
+  static async executeGuard(guardResult: GuardResult, router?: any): Promise<boolean> {
     if (!guardResult.canActivate && guardResult.redirectTo) {
       console.log(`[AuthGuard] Access denied: ${guardResult.reason}, redirecting to ${guardResult.redirectTo}`);
       
@@ -75,8 +75,10 @@ export class AuthGuard {
         });
       }
 
-      // Redirect
-      appRouter.navigate(guardResult.redirectTo);
+      // Redirect using passed router instance
+      if (router) {
+        router.navigate(guardResult.redirectTo);
+      }
       return false;
     }
 
