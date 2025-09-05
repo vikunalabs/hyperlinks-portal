@@ -57,22 +57,6 @@ export class RegisterModal extends withFocusTrap(LitElement) implements ModalCom
         backdrop-filter: blur(4px);
       }
       
-      .modal-container {
-        position: relative;
-        animation: slideIn 0.3s ease-out;
-        max-height: 90vh;
-        overflow-y: auto;
-        width: 100%;
-        max-width: 500px;
-        margin: 0 1rem;
-        /* Hide scrollbar */
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE and Edge */
-      }
-      
-      .modal-container::-webkit-scrollbar {
-        display: none; /* Chrome, Safari and Opera */
-      }
       
       .modal-content {
         width: 100%;
@@ -105,33 +89,6 @@ export class RegisterModal extends withFocusTrap(LitElement) implements ModalCom
         position: relative;
       }
       
-      .password-toggle {
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: #9CA3AF;
-        cursor: pointer;
-        transition: color 0.2s;
-        padding: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-        z-index: 10;
-      }
-      
-      .password-toggle:hover {
-        color: #6B7280;
-      }
-      
-      .password-toggle:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
       
       /* Screen reader only content */
       .sr-only {
@@ -599,13 +556,16 @@ export class RegisterModal extends withFocusTrap(LitElement) implements ModalCom
                 id="username"
                 .value=${this.formData.username}
                 @input=${this.handleInputChange('username')}
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.username.length > 0 ? 'input-error' : ''}"
+                class="input-base ${this.fieldErrors.username.length > 0 ? 'input-error' : ''}"
                 placeholder="Choose a username"
                 ?disabled=${this.modalState.isLoading}
                 aria-required="true"
                 aria-invalid=${this.fieldErrors.username.length > 0 ? 'true' : 'false'}
                 aria-describedby=${this.fieldErrors.username.length > 0 ? 'username-error' : ''}
                 autocomplete="username"
+                inputmode="text"
+                autocapitalize="none"
+                spellcheck="false"
               />
               ${this.fieldErrors.username.length > 0 ? html`
                 <div id="username-error" role="alert" aria-live="polite">
@@ -626,13 +586,16 @@ export class RegisterModal extends withFocusTrap(LitElement) implements ModalCom
                 id="email"
                 .value=${this.formData.email}
                 @input=${this.handleInputChange('email')}
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.email.length > 0 ? 'input-error' : ''}"
+                class="input-base ${this.fieldErrors.email.length > 0 ? 'input-error' : ''}"
                 placeholder="Enter your email address"
                 ?disabled=${this.modalState.isLoading}
                 aria-required="true"
                 aria-invalid=${this.fieldErrors.email.length > 0 ? 'true' : 'false'}
                 aria-describedby=${this.fieldErrors.email.length > 0 ? 'email-error' : ''}
                 autocomplete="email"
+                inputmode="email"
+                autocapitalize="none"
+                spellcheck="false"
               />
               ${this.fieldErrors.email.length > 0 ? html`
                 <div id="email-error" role="alert" aria-live="polite">
@@ -654,13 +617,16 @@ export class RegisterModal extends withFocusTrap(LitElement) implements ModalCom
                   id="register-password"
                   .value=${this.formData.password}
                   @input=${this.handleInputChange('password')}
-                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.password.length > 0 ? 'input-error' : ''}"
+                  class="input-base has-toggle ${this.fieldErrors.password.length > 0 ? 'input-error' : ''}"
                   placeholder="Create a strong password"
                   ?disabled=${this.modalState.isLoading}
                   aria-required="true"
                   aria-invalid=${this.fieldErrors.password.length > 0 ? 'true' : 'false'}
                   aria-describedby=${this.fieldErrors.password.length > 0 ? 'register-password-error' : 'register-password-toggle'}
                   autocomplete="new-password"
+                  inputmode="text"
+                  autocapitalize="none"
+                  spellcheck="false"
                 />
                 <button
                   type="button"
@@ -705,13 +671,16 @@ export class RegisterModal extends withFocusTrap(LitElement) implements ModalCom
                   id="confirm-password"
                   .value=${this.formData.confirmPassword}
                   @input=${this.handleInputChange('confirmPassword')}
-                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.confirmPassword.length > 0 ? 'input-error' : ''}"
+                  class="input-base has-toggle ${this.fieldErrors.confirmPassword.length > 0 ? 'input-error' : ''}"
                   placeholder="Confirm your password"
                   ?disabled=${this.modalState.isLoading}
                   aria-required="true"
                   aria-invalid=${this.fieldErrors.confirmPassword.length > 0 ? 'true' : 'false'}
                   aria-describedby=${this.fieldErrors.confirmPassword.length > 0 ? 'confirm-password-error' : 'confirm-password-toggle'}
                   autocomplete="new-password"
+                  inputmode="text"
+                  autocapitalize="none"
+                  spellcheck="false"
                 />
                 <button
                   type="button"
@@ -755,10 +724,13 @@ export class RegisterModal extends withFocusTrap(LitElement) implements ModalCom
                 id="organization"
                 .value=${this.formData.organization}
                 @input=${this.handleInputChange('organization')}
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                class="input-base"
                 placeholder="Your company or organization"
                 ?disabled=${this.modalState.isLoading}
                 autocomplete="organization"
+                inputmode="text"
+                autocapitalize="words"
+                spellcheck="true"
               />
             </div>
 

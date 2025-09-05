@@ -41,23 +41,6 @@ export class PasswordResetConfirmationModal extends withFocusTrap(LitElement) im
         backdrop-filter: blur(4px);
       }
       
-      .modal-container {
-        position: relative;
-        animation: slideIn 0.3s ease-out;
-        max-height: 90vh;
-        overflow-y: auto;
-        width: 100%;
-        max-width: 500px;
-        margin: 0 1rem;
-        /* Hide scrollbar */
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE and Edge */
-      }
-      
-      .modal-container::-webkit-scrollbar {
-        display: none; /* Chrome, Safari and Opera */
-      }
-      
       .modal-content {
         width: 100%;
         background: white !important;

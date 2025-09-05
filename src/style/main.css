@@ -135,3 +135,241 @@ body.modal-open {
 @utility hero-gradient {
   background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 50%, #f0f9ff 100%);
 }
+
+/* Mobile-First Responsive Utilities */
+
+/* Touch-friendly button targets (minimum 44px) */
+@utility touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Password toggle with mobile-optimized touch targets */
+@utility password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #9CA3AF;
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s;
+  border-radius: 0.375rem;
+  z-index: 10;
+  
+  /* Mobile-first sizing - 44px touch target */
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover, &:focus-visible {
+    color: #6B7280;
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  
+  &:active {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Mobile-optimized modal container */
+@utility modal-container {
+  position: relative;
+  animation: slideIn 0.3s ease-out;
+  max-height: 90vh;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 1rem;
+  
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+  
+  /* Mobile-specific optimizations */
+  @media (max-width: 480px) {
+    max-width: calc(100vw - 1rem);
+    margin: 0 0.5rem;
+    max-height: 85vh;
+  }
+  
+  @media (max-width: 375px) {
+    max-width: calc(100vw - 0.5rem);
+    margin: 0 0.25rem;
+    max-height: 80vh;
+  }
+}
+
+/* Note: Scrollbar hiding is handled within the modal-container utility */
+
+/* Mobile-optimized input fields */
+@utility input-base {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #374151;
+  background-color: white;
+  transition: all 0.2s;
+  
+  &:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: var(--color-primary);
+    border-color: transparent;
+  }
+  
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+  }
+  
+  /* Mobile-specific improvements */
+  @media (max-width: 640px) {
+    padding: 0.875rem 1rem;
+    font-size: 1rem; /* Prevent zoom on iOS */
+    min-height: 44px; /* Touch target compliance */
+  }
+  
+  /* Password fields need extra padding for toggle button */
+  &.has-toggle {
+    padding-right: 3rem;
+    
+    @media (max-width: 640px) {
+      padding-right: 3.5rem; /* More space for larger touch target */
+    }
+  }
+}
+
+/* Mobile navigation utilities */
+@utility mobile-nav-trigger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  color: #6b7280;
+  transition: all 0.2s;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover, &:focus-visible {
+    color: #374151;
+    background-color: #f3f4f6;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  
+  @media (max-width: 768px) {
+    display: flex;
+  }
+}
+
+@utility mobile-nav-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  
+  &.open {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Mobile typography scaling */
+@utility heading-mobile {
+  @media (max-width: 640px) {
+    font-size: 2rem; /* 32px instead of default large sizes */
+    line-height: 2.5rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.75rem; /* 28px for very small screens */
+    line-height: 2.25rem;
+  }
+}
+
+@utility subheading-mobile {
+  @media (max-width: 640px) {
+    font-size: 1.25rem; /* 20px */
+    line-height: 1.75rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.125rem; /* 18px */
+    line-height: 1.625rem;
+  }
+}
+
+/* Mobile spacing utilities */
+@utility section-padding-mobile {
+  padding: 3rem 1rem; /* Default */
+  
+  @media (max-width: 640px) {
+    padding: 2rem 1rem; /* Reduced for mobile */
+  }
+  
+  @media (max-width: 480px) {
+    padding: 1.5rem 0.75rem; /* Further reduced for small screens */
+  }
+}
+
+@utility modal-padding-mobile {
+  padding: 2rem;
+  
+  @media (max-width: 640px) {
+    padding: 1.5rem;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 1rem;
+  }
+}
+
+/* These duplicate the existing btn utilities above - removing for simplicity */

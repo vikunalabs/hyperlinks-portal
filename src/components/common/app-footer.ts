@@ -17,7 +17,7 @@ export class AppFooter extends LitElement {
     return html`
       <footer class="bg-gray-900 text-white py-12">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             <!-- Company Info -->
             <div class="md:col-span-2">
               <h3 class="text-2xl font-bold mb-4">Hyperlinks Management Platform</h3>

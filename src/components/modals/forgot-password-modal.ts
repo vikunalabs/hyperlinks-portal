@@ -53,22 +53,6 @@ export class ForgotPasswordModal extends withFocusTrap(LitElement) implements Mo
         backdrop-filter: blur(4px);
       }
       
-      .modal-container {
-        position: relative;
-        animation: slideIn 0.3s ease-out;
-        max-height: 90vh;
-        overflow-y: auto;
-        width: 100%;
-        max-width: 500px;
-        margin: 0 1rem;
-        /* Hide scrollbar */
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE and Edge */
-      }
-      
-      .modal-container::-webkit-scrollbar {
-        display: none; /* Chrome, Safari and Opera */
-      }
       
       .modal-content {
         width: 100%;
@@ -455,13 +439,16 @@ export class ForgotPasswordModal extends withFocusTrap(LitElement) implements Mo
                 name="email"
                 .value=${this.formData.email}
                 @input=${this.handleInputChange('email')}
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${this.fieldErrors.email.length > 0 ? 'input-error' : ''}"
+                class="input-base ${this.fieldErrors.email.length > 0 ? 'input-error' : ''}"
                 placeholder="Enter your email address"
                 ?disabled=${this.modalState.isLoading}
                 aria-required="true"
                 aria-invalid=${this.fieldErrors.email.length > 0 ? 'true' : 'false'}
                 aria-describedby=${this.fieldErrors.email.length > 0 ? 'forgot-email-error' : ''}
                 autocomplete="email"
+                inputmode="email"
+                autocapitalize="none"
+                spellcheck="false"
               />
               ${this.fieldErrors.email.length > 0 ? html`
                 <div id="forgot-email-error" role="alert" aria-live="polite">

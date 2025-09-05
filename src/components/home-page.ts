@@ -1,5 +1,5 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement } from 'lit/decorators.js';
 import { ref, createRef } from 'lit/directives/ref.js';
 import tailwindStyles from '../style/main.css?inline';
 import './common/app-navbar';
@@ -149,19 +149,19 @@ export class HomePage extends LitElement {
 
       <!-- Main Content -->
       <main class="flex-1 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div class="max-w-6xl mx-auto section-padding-mobile">
           <div class="text-center">
-            <h2 class="text-6xl md:text-7xl font-extrabold text-gray-900 mb-8 leading-tight">
+            <h2 class="heading-mobile text-6xl md:text-7xl font-extrabold text-gray-900 mb-8 leading-tight">
               Welcome to<br>
               <span class="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Hyperlinks Management
               </span><br>
               <span class="text-gray-700">Platform</span>
             </h2>
-            <p class="text-2xl text-gray-600 max-w-4xl mx-auto mb-12 leading-relaxed">
+            <p class="subheading-mobile text-2xl text-gray-600 max-w-4xl mx-auto mb-12 leading-relaxed">
               Organize, manage, and share your important links with ease.
             </p>
-            <p class="text-xl text-gray-500 max-w-5xl mx-auto mb-12">
+            <p class="subheading-mobile text-xl text-gray-500 max-w-5xl mx-auto mb-12">
               Get started today and take control of your digital bookmarks.
             </p>
             <div class="flex flex-col sm:flex-row gap-6 justify-center mb-16">
@@ -173,7 +173,7 @@ export class HomePage extends LitElement {
               </button>
             </div>
             <!-- Feature highlights -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-4xl mx-auto">
               <div class="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-white/50 shadow-lg">
                 <div class="text-4xl mb-4">🔗</div>
                 <h3 class="text-xl font-semibold text-gray-900 mb-2">Smart Organization</h3>
