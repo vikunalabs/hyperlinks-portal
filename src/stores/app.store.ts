@@ -1,5 +1,5 @@
 import { createStore } from 'zustand/vanilla';
-import type { AppState, Notification } from '../types/auth.types';
+import type { AppState, Notification } from '@/types/auth.types';
 
 let notificationId = 0;
 

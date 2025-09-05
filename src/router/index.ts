@@ -2,8 +2,8 @@
 
 import Navigo from 'navigo';
 import { routes, ROUTES, type RouteConfig } from './routes';
-import { authStore } from '../stores/auth.store';
-import { appStore } from '../stores/app.store';
+import { authStore } from '@/stores/auth.store';
+import { appStore } from '@/stores/app.store';
 import { AuthGuard, routeGuards } from './auth-guard';
 
 export class AppRouter {

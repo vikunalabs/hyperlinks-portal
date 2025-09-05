@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla';
-import type { AuthState, LoginCredentials, RegistrationData, User } from '../types/auth.types';
-import { authService } from '../services/auth.service';
+import type { AuthState, LoginCredentials, RegistrationData, User } from '@/types/auth.types';
+import { authService } from '@/services/auth.service';
 
 export const authStore = createStore<AuthState>()((set, get) => ({
   user: null,

@@ -1,7 +1,7 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
-import tailwindStyles from '../../style/main.css?inline';
+import tailwindStyles from '@/style/main.css?inline';
 
 export interface MenuItem {
   id: string;

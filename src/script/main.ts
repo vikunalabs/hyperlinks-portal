@@ -1,13 +1,13 @@
-import '../style/main.css'
+import '@/style/main.css'
 
 // Import stores
-import { appStore } from '../stores';
+import { appStore } from '@/stores';
 
 // Import router
-import { appRouter } from '../router';
+import { appRouter } from '@/router';
 
 // Import scrollbar utilities
-import { setScrollbarWidthProperty } from '../utils/scrollbar';
+import { setScrollbarWidthProperty } from '@utils/scrollbar';
 
 // Application entry point
 document.addEventListener('DOMContentLoaded', async () => {

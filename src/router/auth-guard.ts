@@ -1,7 +1,7 @@
 // Authentication guard utilities for route protection
 
-import { authStore } from '../stores/auth.store';
-import { appStore } from '../stores/app.store';
+import { authStore } from '@/stores/auth.store';
+import { appStore } from '@/stores/app.store';
 import { ROUTES } from './routes';
 
 export interface GuardResult {

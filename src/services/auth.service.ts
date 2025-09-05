@@ -2,7 +2,7 @@
 
 import { HttpService } from './http.service';
 import { csrfService } from './csrf.service';
-import { API_BASE_URLS, AUTH_ENDPOINTS } from '../utils/constants';
+import { API_BASE_URLS, AUTH_ENDPOINTS } from '@utils/constants';
 import type { 
   LoginCredentials, 
   RegistrationData, 

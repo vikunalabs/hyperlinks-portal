@@ -2,7 +2,7 @@ import { LitElement, html, css, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import tailwindStyles from '@/style/main.css?inline';
 import '@components/common/collapsible-sidebar';
-import type { MenuItem, MenuSection, UserProfile } from '../common/collapsible-sidebar';
+import type { MenuItem, MenuSection, UserProfile } from '@components/common/collapsible-sidebar';
 
 @customElement('protected-layout')
 export class ProtectedLayout extends LitElement {

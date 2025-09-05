@@ -1,8 +1,8 @@
 // Base HTTP service with Axios configuration and interceptors
 
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
-import type { ApiResponse } from '../types/auth.types';
-import { HTTP_CONFIG } from '../utils/constants';
+import type { ApiResponse } from '@/types/auth.types';
+import { HTTP_CONFIG } from '@utils/constants';
 
 export class HttpService {
   private instance: AxiosInstance;

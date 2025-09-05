@@ -1,7 +1,7 @@
 // CSRF token management service
 
 import { HttpService } from './http.service';
-import { API_BASE_URLS, AUTH_ENDPOINTS } from '../utils/constants';
+import { API_BASE_URLS, AUTH_ENDPOINTS } from '@utils/constants';
 
 export class CsrfService {
   private httpService: HttpService;

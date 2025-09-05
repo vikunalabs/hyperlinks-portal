@@ -1,11 +1,11 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { ref, createRef } from 'lit/directives/ref.js';
-import tailwindStyles from '../../style/main.css?inline';
-import { ModalScrollManager } from '../../utils/scrollbar';
-import { withFocusTrap } from '../../utils/focus-trap';
-import { FormValidator } from '../../utils/validation';
-import { ErrorHandler } from '../../utils/error-handler';
+import tailwindStyles from '@/style/main.css?inline';
+import { ModalScrollManager } from '@utils/scrollbar';
+import { withFocusTrap } from '@utils/focus-trap';
+import { FormValidator } from '@utils/validation';
+import { ErrorHandler } from '@utils/error-handler';
 // Define types locally for now to avoid import issues
 interface ModalComponent {
   open(): void;
