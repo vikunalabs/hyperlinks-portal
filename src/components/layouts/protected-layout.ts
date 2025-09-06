@@ -24,6 +24,12 @@ export class ProtectedLayout extends LitElement {
   @property({ type: String })
   activePage: string = 'dashboard';
 
+  @property({ type: String })
+  brandName: string = 'ZLinkly';
+
+  @property({ type: String })
+  brandTagline: string = '';
+
   @state()
   private userProfile: UserProfile = {
     name: 'John Doe',
@@ -123,8 +129,8 @@ export class ProtectedLayout extends LitElement {
           .mainNavItems=${this.getMainNavItems()}
           .menuSections=${this.getMenuSections()}
           .userProfile=${this.userProfile}
-          brandName="HyperLinks Pro"
-          brandTagline="Premium URL Management"
+          .brandName=${this.brandName}
+          .brandTagline=${this.brandTagline}
         ></collapsible-sidebar>
 
         <!-- Main Content Area -->
