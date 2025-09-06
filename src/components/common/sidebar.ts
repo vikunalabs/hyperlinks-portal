@@ -24,8 +24,8 @@ export interface UserProfile {
   plan: string;
 }
 
-@customElement('collapsible-sidebar')
-export class CollapsibleSidebar extends LitElement {
+@customElement('app-sidebar')
+export class Sidebar extends LitElement {
   static styles = [
     css`${unsafeCSS(tailwindStyles)}`,
     css`
@@ -162,9 +162,6 @@ export class CollapsibleSidebar extends LitElement {
   @state()
   private expandedSections = new Set<string>();
 
-  @state()
-  private isUserMenuOpen = false;
-
 
   private iconMap: { [key: string]: any } = {
     'fas fa-home': html`<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>`,
@@ -214,10 +211,6 @@ export class CollapsibleSidebar extends LitElement {
     this.requestUpdate();
   }
 
-  private toggleUserMenu() {
-    this.isUserMenuOpen = !this.isUserMenuOpen;
-  }
-
   private handleLogout() {
     // Dispatch logout event
     this.dispatchEvent(new CustomEvent('logout', {
@@ -228,15 +221,6 @@ export class CollapsibleSidebar extends LitElement {
 
   private renderIcon(iconClass: string) {
     return this.iconMap[iconClass] || html`<div class="w-5 h-5 bg-gray-300 rounded"></div>`;
-  }
-
-  private getColorForSection(sectionId: string): { color: string; bgColor: string; hoverColor: string } {
-    // Single color theme using primary blue for all sections
-    return {
-      color: 'var(--color-primary)', 
-      bgColor: 'color-mix(in srgb, var(--color-primary) 8%, white)',
-      hoverColor: 'color-mix(in srgb, var(--color-primary) 5%, white)'
-    };
   }
 
   private renderMobileButton() {
@@ -267,8 +251,8 @@ export class CollapsibleSidebar extends LitElement {
       
       <aside class="sidebar ${this.isMobileSidebarOpen ? 'open' : ''} w-64 bg-white shadow-md flex flex-col h-screen">
         <!-- Header -->
-        <div class="px-6 py-6 border-b text-center" style="border-color: var(--color-border); min-height: 88px; display: flex; flex-direction: column; justify-content: center;">
-          <h1 class="text-2xl font-bold flex items-center justify-center" style="color: var(--color-primary);">
+        <div class="px-6 py-4 md:py-6 border-b text-center" style="border-color: var(--color-border); height: auto; min-height: 105px; display: flex; flex-direction: column; justify-content: center;">
+          <h1 class="text-xl md:text-2xl font-bold flex items-center justify-center" style="color: var(--color-primary);">
             <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" />
             </svg>
@@ -277,7 +261,7 @@ export class CollapsibleSidebar extends LitElement {
           <p class="text-xs mt-1" style="color: var(--color-secondary);">${this.brandTagline}</p>
         </div>
 
-        <div class="flex-1 overflow-y-auto pt-4 pb-4">
+        <div class="flex-1 overflow-y-auto pt-4 pb-4 border-r" style="border-color: var(--color-border);">
           <!-- Main Navigation -->
           <div class="mb-4">
             ${this.mainNavItems.map(item => html`
@@ -324,7 +308,7 @@ export class CollapsibleSidebar extends LitElement {
         </div>
 
         <!-- Bottom Section: Logout & User Profile - Sticky to bottom -->
-        <div class="mt-auto">
+        <div class="mt-auto border-r" style="border-color: var(--color-border);">
           <!-- Logout Button - Above user info as per design -->
           <div class="p-4" style="border-top: 1px solid var(--color-border);">
             <button 

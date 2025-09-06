@@ -1,8 +1,10 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import tailwindStyles from '@/style/main.css?inline';
-import '@components/common/collapsible-sidebar';
-import type { MenuItem, MenuSection, UserProfile } from '@components/common/collapsible-sidebar';
+import '@components/common/sidebar';
+import '@components/common/page-header';
+import type { MenuItem, MenuSection, UserProfile } from '@components/common/sidebar';
+import type { ActionButton } from '@components/common/page-header';
 
 @customElement('protected-layout')
 export class ProtectedLayout extends LitElement {
@@ -15,8 +17,9 @@ export class ProtectedLayout extends LitElement {
       }
       
       .main-content {
-        margin-left: 256px;
-        transition: margin-left 0.3s ease-in-out;
+        flex: 1;
+        height: 100vh;
+        overflow: hidden;
       }
     `
   ];
@@ -29,6 +32,24 @@ export class ProtectedLayout extends LitElement {
 
   @property({ type: String })
   brandTagline: string = '';
+
+  @property({ type: String })
+  pageTitle: string = 'Page Title';
+
+  @property({ type: String })
+  pageDescription: string = '';
+
+  @property({ type: Boolean })
+  showSearch: boolean = true;
+
+  @property({ type: String })
+  searchPlaceholder: string = 'Search...';
+
+  @property({ type: Array })
+  actionButtons: ActionButton[] = [];
+
+  @property({ type: Boolean })
+  showUserMenu: boolean = true;
 
   @state()
   private userProfile: UserProfile = {
@@ -121,21 +142,52 @@ export class ProtectedLayout extends LitElement {
     ];
   }
 
+  private handleSearch(e: CustomEvent) {
+    // Dispatch search event to parent or handle search logic
+    this.dispatchEvent(new CustomEvent('search', {
+      detail: e.detail,
+      bubbles: true,
+      composed: true
+    }));
+  }
+
+  private handleLogout() {
+    // Handle logout logic
+    console.log('Logout clicked from page header');
+    // You can add your logout logic here
+  }
+
   render() {
     return html`
       <div class="flex min-h-screen">
-        <!-- Collapsible Sidebar -->
-        <collapsible-sidebar 
+        <!-- Sidebar -->
+        <app-sidebar 
           .mainNavItems=${this.getMainNavItems()}
           .menuSections=${this.getMenuSections()}
           .userProfile=${this.userProfile}
           .brandName=${this.brandName}
           .brandTagline=${this.brandTagline}
-        ></collapsible-sidebar>
+        ></app-sidebar>
 
         <!-- Main Content Area -->
-        <div class="main-content flex-1" style="background-color: var(--color-bg);">
-          <slot></slot>
+        <div class="main-content flex flex-col" style="background-color: var(--color-bg);">
+          <!-- Page Header -->
+          <page-header
+            .pageTitle=${this.pageTitle}
+            .pageDescription=${this.pageDescription}
+            .showSearch=${this.showSearch}
+            .searchPlaceholder=${this.searchPlaceholder}
+            .actionButtons=${this.actionButtons}
+            .showUserMenu=${this.showUserMenu}
+            .userProfile=${this.userProfile}
+            @search=${this.handleSearch}
+            @logout=${this.handleLogout}
+          ></page-header>
+          
+          <!-- Page Content -->
+          <div class="flex-1 overflow-y-auto">
+            <slot></slot>
+          </div>
         </div>
       </div>
     `;

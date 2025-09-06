@@ -16,12 +16,38 @@ export class MyLinksPage extends LitElement {
   ];
 
 
+  private getActionButtons() {
+    return [
+      {
+        id: 'create-link',
+        label: 'Create Link',
+        icon: 'fas fa-plus',
+        primary: true,
+        handler: () => console.log('Create Link clicked')
+      },
+      {
+        id: 'import',
+        label: 'Import',
+        icon: 'fas fa-upload',
+        primary: false,
+        handler: () => console.log('Import clicked')
+      }
+    ];
+  }
+
   render() {
     return html`
-      <protected-layout activePage="links">
-        <div class="flex items-center justify-center min-h-screen">
+      <protected-layout 
+        activePage="links"
+        pageTitle="My URLs"
+        pageDescription="Manage and track all your shortened links"
+        .actionButtons=${this.getActionButtons()}
+        searchPlaceholder="Search links..."
+      >
+        <div class="p-6">
           <div class="text-center container">
-            <h1 class="text-4xl font-bold mb-4" style="color: var(--color-text);">MyLinks</h1>
+            <h1 class="text-4xl font-bold mb-4" style="color: var(--color-text);">My Links Content</h1>
+            <p style="color: var(--color-secondary);">Your links management interface goes here.</p>
           </div>
         </div>
       </protected-layout>

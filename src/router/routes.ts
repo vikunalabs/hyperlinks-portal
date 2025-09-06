@@ -5,6 +5,9 @@ import '@components/pages/protected/dashboard-page';
 import '@components/pages/public/home-page';
 import '@components/pages/protected/mylinks-page';
 
+// Import sidebar component (needed for protected pages)
+import '@components/common/sidebar';
+
 // Utility function to render pages
 function renderPage(componentTag: string) {
   const appContainer = document.getElementById('app');
