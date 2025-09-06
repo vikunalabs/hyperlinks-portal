@@ -3,6 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import tailwindStyles from '@/style/main.css?inline';
 import '@components/common/sidebar';
 import '@components/common/page-header';
+import '@components/common/protected-footer';
 import type { MenuItem, MenuSection, UserProfile } from '@components/common/sidebar';
 import type { ActionButton } from '@components/common/page-header';
 
@@ -187,6 +188,9 @@ export class ProtectedLayout extends LitElement {
           <!-- Page Content -->
           <div class="flex-1 overflow-y-auto">
             <slot></slot>
+            
+            <!-- Protected Footer -->
+            <protected-footer></protected-footer>
           </div>
         </div>
       </div>

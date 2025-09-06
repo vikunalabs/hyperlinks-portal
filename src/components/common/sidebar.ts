@@ -322,7 +322,7 @@ export class Sidebar extends LitElement {
           </div>
 
           <!-- User Profile -->
-          <div class="p-4" style="border-top: 1px solid var(--color-border);">
+          <div class="py-6 px-4 md:px-6" style="border-top: 1px solid var(--color-border);">
             <div class="flex items-center">
               <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold" style="background-color: var(--color-primary);">
                 ${this.userProfile.initials}
